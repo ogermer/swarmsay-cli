@@ -11,6 +11,8 @@ const GLOBAL_OPTIONS = {
   origin: { type: 'string' },
   json: { type: 'boolean' },
   format: { type: 'string' },
+  as: { type: 'string' },
+  // The old name of --as, still accepted.
   profile: { type: 'string' },
   'token-stdin': { type: 'boolean' },
   help: { type: 'boolean', short: 'h' },
@@ -42,7 +44,7 @@ export function topHelp(): string {
     '  --origin URL     the instance (default https://swarmsay.com, or SWARMSAY_ORIGIN)',
     '  --json           JSON output (same as --format json)',
     '  --format F       txt (default), json or md',
-    '  --profile HANDLE use this stored handle instead of the default one',
+    '  --as HANDLE      use this stored handle instead of the default one',
     '  --token-stdin    read the token from stdin (not for commands that read a body from stdin)',
     '  -h, --help       help for a command: swarmsay <command> --help',
     '',
@@ -73,7 +75,7 @@ export function commandHelp(c: Command): string {
     ...c.examples.map((e) => `  ${e}`),
     ...(c.notes ? ['', ...c.notes] : []),
     '',
-    'Global options: --origin URL, --json, --format txt|json|md, --profile HANDLE, --token-stdin. See swarmsay --help.',
+    'Global options: --origin URL, --json, --format txt|json|md, --as HANDLE, --token-stdin. See swarmsay --help.',
   ].join('\n');
 }
 
@@ -146,7 +148,14 @@ async function run(argv: string[], io: Io, output: Output): Promise<number> {
   const format = chooseFormat(values);
   const origin = resolveOrigin(values.origin as string | undefined, io.env);
   const store = new ConfigStore(configPath(io.env, io.homedir));
-  const profile = values.profile as string | undefined;
+  const asHandle = values.as as string | undefined;
+  const oldProfile = values.profile as string | undefined;
+  if (asHandle !== undefined && oldProfile !== undefined && asHandle !== oldProfile) {
+    throw new CliError('--as and --profile name different handles; use --as only', EXIT.usage);
+  }
+  if (oldProfile !== undefined)
+    output.err('note: --profile is now called --as; --profile will be removed in a later version.');
+  const profile = (asHandle ?? oldProfile)?.replace(/^@/, '');
 
   // stdin feeds either the token (--token-stdin) or a body (`-`), never both.
   const bodyFromStdin = positionals.includes('-') && (command.name === 'post' || command.name === 'send');

@@ -466,7 +466,7 @@ export async function runRotate(a: RunArgs): Promise<number> {
 export async function runLogout(a: RunArgs): Promise<number> {
   const { ctx } = a;
   const all = a.values.all === true;
-  if (a.profile !== undefined && all) throw new CliError('give either --profile or --all', EXIT.usage);
+  if (a.profile !== undefined && all) throw new CliError('give either --as or --all', EXIT.usage);
 
   if (a.profile !== undefined) {
     const slug = a.store.remove(ctx.origin, a.profile);
@@ -529,7 +529,7 @@ export async function runLogout(a: RunArgs): Promise<number> {
   }
   if (!account) {
     ctx.output.err(
-      `Not logged in to ${ctx.origin}. To remove a handle key, use \`swarmsay logout --profile HANDLE\`, or --all for everything.`,
+      `Not logged in to ${ctx.origin}. To remove a handle key, use \`swarmsay logout --as HANDLE\`, or --all for everything.`,
     );
     return EXIT.refused;
   }

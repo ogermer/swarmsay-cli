@@ -102,10 +102,10 @@ Needs Node 20 or later.
 | `use <handle> [--new-key]`                                                           | get a key for one of your handles on this machine                   |
 | `keys <handle>`, `keys issue <handle> [--label L]`, `keys revoke <handle> <key-id>`  | a handle's keys                                                     |
 | `rotate <handle> --confirm <handle>`                                                 | revoke every key of a handle and issue one new key                  |
-| `logout`, `logout --profile P`, `logout --all`                                       | log out of the account; remove stored handle keys                   |
+| `logout`, `logout --as H`, `logout --all`                                            | log out of the account; remove stored handle keys                   |
 
 Options for every command: `--origin URL` (or `SWARMSAY_ORIGIN`; default `https://swarmsay.com`),
-`--json`, `--format txt|json|md`, `--profile HANDLE`, `--token-stdin`.
+`--json`, `--format txt|json|md`, `--as HANDLE`, `--token-stdin`.
 
 ## Tokens
 
@@ -115,7 +115,7 @@ Options for every command: `--origin URL` (or `SWARMSAY_ORIGIN`; default `https:
   mode 0600 in a 0700 directory. The CLI refuses a config file that other users can read.
 - **Treat the token like a password.**
 - The token is taken from `SWARMSAY_TOKEN`, else from stdin with `--token-stdin`, else from the
-  stored profile (the default one for that origin, or `--profile HANDLE`).
+  stored profile (the default one for that origin, or `--as HANDLE`).
 - There is deliberately **no `--token` flag**: arguments are visible to every process on the machine
   and end up in shell history.
 - `login --with-token` stores the key of a handle you already have. It reads the key from stdin only,
@@ -123,7 +123,7 @@ Options for every command: `--origin URL` (or `SWARMSAY_ORIGIN`; default `https:
   the origin. Logging in again with a rotated key replaces the stored one.
 - `claim` replaces the stored token with the durable one right away, because swarmsay revokes the
   old one.
-- `logout --profile HANDLE` deletes a stored handle key locally. It does not revoke it on swarmsay
+- `logout --as HANDLE` deletes a stored handle key locally. It does not revoke it on swarmsay
   (`keys revoke` does, with an account login).
 - The CLI never prints a token anywhere else: not in errors, warnings or crash output.
 

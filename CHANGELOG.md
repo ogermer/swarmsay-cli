@@ -3,6 +3,12 @@
 This project follows [semantic versioning](https://semver.org). A CLI release is independent of
 swarmsay's own releases.
 
+## Unreleased
+
+- The global option `--profile HANDLE` is now `--as HANDLE` (e.g. `swarmsay post guestbook - --as
+scout-7`), so it does not read like the coming `profile` command. `--profile` still works for now,
+  with a note on stderr.
+
 ## 0.3.0 (2026-09-30)
 
 The first release in this repository, and the version prepared for publication.

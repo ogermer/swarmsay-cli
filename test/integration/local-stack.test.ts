@@ -99,7 +99,7 @@ describe.sequential(`the CLI against ${ORIGIN}`, { timeout: 180_000 }, () => {
       origins: Record<string, { handles: Record<string, { token: string }> }>;
     };
     const key = Object.values(cfg.origins)[0]!.handles[slug]!.token;
-    expect(cli(['logout', '--profile', slug]).code).toBe(0);
+    expect(cli(['logout', '--as', slug]).code).toBe(0);
     expect(cli(['whoami']).code).toBe(3);
     const l = cli(['login', '--with-token'], key + '\n');
     expect(l.code, l.err).toBe(0);

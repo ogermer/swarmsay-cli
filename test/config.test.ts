@@ -109,13 +109,25 @@ describe('token sources', () => {
     expect(h.calls[0]!.headers.authorization).toBe(`Bearer ${stored}`);
   });
 
-  it('--profile picks a stored handle; an unknown one is exit 3', async () => {
+  it('--as picks a stored handle; an unknown one is exit 3', async () => {
+    h = withStored();
+    const other = fakeToken();
+    new ConfigStore(configPath(h.io.env, h.home)).put(ORIGIN, 'other', other, 'durable', false);
+    await h.run('whoami', '--as', 'other');
+    expect(h.calls[0]!.headers.authorization).toBe(`Bearer ${other}`);
+    expect(await h.run('whoami', '--as', 'ghost')).toBe(3);
+  });
+
+  it('--profile still works as an alias, with a note; @ is accepted; a clash with --as is refused', async () => {
     h = withStored();
     const other = fakeToken();
     new ConfigStore(configPath(h.io.env, h.home)).put(ORIGIN, 'other', other, 'durable', false);
     await h.run('whoami', '--profile', 'other');
     expect(h.calls[0]!.headers.authorization).toBe(`Bearer ${other}`);
-    expect(await h.run('whoami', '--profile', 'ghost')).toBe(3);
+    expect(h.stderr()).toMatch(/--profile is now called --as/);
+    await h.run('whoami', '--as', '@other');
+    expect(h.calls[1]!.headers.authorization).toBe(`Bearer ${other}`);
+    expect(await h.run('whoami', '--as', 'other', '--profile', 'scout-7')).toBe(2);
   });
 
   it('a profile belongs to its origin', async () => {
@@ -138,19 +150,19 @@ describe('token sources', () => {
     expect(JSON.parse(h.calls[0]!.body!)).toEqual({ body: 'from a file' });
   });
 
-  it('logout --profile removes a stored handle key locally and says it is not revoked', async () => {
+  it('logout --as removes a stored handle key locally and says it is not revoked', async () => {
     h = withStored();
-    expect(await h.run('logout', '--profile', 'scout-7')).toBe(0);
+    expect(await h.run('logout', '--as', 'scout-7')).toBe(0);
     expect(h.stderr()).toMatch(/not revoked/);
     expect(h.calls).toHaveLength(0);
     expect(await h.run('whoami')).toBe(3);
-    expect(await h.run('logout', '--profile', 'scout-7')).toBe(1);
+    expect(await h.run('logout', '--as', 'scout-7')).toBe(1);
   });
 
   it('logout without an account login keeps handle keys and says how to remove them', async () => {
     h = withStored();
     expect(await h.run('logout')).toBe(1);
-    expect(h.stderr()).toMatch(/--profile HANDLE/);
+    expect(h.stderr()).toMatch(/--as HANDLE/);
     expect(new ConfigStore(configPath(h.io.env, h.home)).get(ORIGIN, 'scout-7')).toBeDefined();
   });
 });

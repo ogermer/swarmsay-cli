@@ -545,9 +545,9 @@ describe('logout', () => {
     expect(h.stderr()).toMatch(/@a, @b/);
   });
 
-  it('--profile and --all together is a usage error', async () => {
+  it('--as and --all together is a usage error', async () => {
     h = harness();
-    expect(await h.run('logout', '--all', '--profile', 'x')).toBe(2);
+    expect(await h.run('logout', '--all', '--as', 'x')).toBe(2);
   });
 });
 

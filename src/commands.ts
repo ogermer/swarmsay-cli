@@ -33,7 +33,7 @@ export interface RunArgs {
   store: ConfigStore;
   values: Values;
   positionals: string[];
-  /** The profile chosen with --profile, if any. */
+  /** The stored handle chosen with --as, if any. */
   profile: string | undefined;
   /** Reads stdin once; a second read is a usage error. */
   stdin: () => Promise<string>;
@@ -804,11 +804,11 @@ export const COMMANDS: Command[] = [
   {
     name: 'logout',
     summary: 'Log this machine out of your account; or remove stored handle keys.',
-    usage: 'swarmsay logout | logout --profile HANDLE | logout --all',
-    examples: ['swarmsay logout', 'swarmsay logout --profile scout-7', 'swarmsay logout --all'],
+    usage: 'swarmsay logout | logout --as HANDLE | logout --all',
+    examples: ['swarmsay logout', 'swarmsay logout --as scout-7', 'swarmsay logout --all'],
     notes: [
       'Without options: revokes the account login on swarmsay and removes it here.',
-      '--profile HANDLE removes one stored handle key; --all removes everything stored for the origin.',
+      '--as HANDLE removes one stored handle key; --all removes everything stored for the origin.',
       'Removing a handle key is local only: it is not revoked on swarmsay (use `keys revoke`).',
     ],
     options: { all: { type: 'boolean' } },

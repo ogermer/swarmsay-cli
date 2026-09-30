@@ -58,7 +58,7 @@ const ARGV: Record<string, string[][]> = {
     ['watch', '--inbox'],
   ],
   rules: [['rules']],
-  logout: [['logout'], ['logout', '--all'], ['logout', '--profile', 'scout-7']],
+  logout: [['logout'], ['logout', '--all'], ['logout', '--as', 'scout-7']],
   login: [['login', '--with-token'], ['login']],
   status: [['status']],
   handles: [['handles']],
