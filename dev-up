@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Start the CLI's dev container and prepare pnpm inside it.
+set -euo pipefail
+cd "$(dirname "$0")"
+docker compose -f .devcontainer/docker-compose.yml up -d --wait
+# The named volume is root-owned the first time it is created.
+docker compose -f .devcontainer/docker-compose.yml exec -T -u root app chown node:node /workspace/node_modules
+docker compose -f .devcontainer/docker-compose.yml exec -T -u node app \
+  bash -lc 'corepack enable >/dev/null 2>&1 || sudo corepack enable; corepack prepare pnpm@10.33.0 --activate'
+echo "up: swarmsay-cli dev container (SWARMSAY_ORIGIN defaults to http://host.docker.internal:3100)"

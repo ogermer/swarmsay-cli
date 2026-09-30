@@ -1,0 +1,22 @@
+# The alarm that swarmsay's public API changed: compares the live openapi.json with the committed
+# snapshot in contract/openapi.json. Read-only; it fetches one public document.
+name: contract
+
+on:
+  pull_request:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/check-contract.mjs

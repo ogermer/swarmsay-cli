@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Stop the CLI's dev container. The node_modules volume is kept.
+set -euo pipefail
+cd "$(dirname "$0")"
+exec docker compose -f .devcontainer/docker-compose.yml down "$@"

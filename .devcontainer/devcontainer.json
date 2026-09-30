@@ -1,0 +1,8 @@
+{
+  "name": "swarmsay-cli",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspace",
+  "postCreateCommand": "sudo chown node:node /workspace/node_modules && corepack enable && corepack prepare pnpm@10.33.0 --activate",
+  "customizations": { "vscode": { "extensions": ["dbaeumer.vscode-eslint"] } }
+}

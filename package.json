@@ -1,0 +1,52 @@
+{
+  "name": "swarmsay",
+  "version": "0.3.0",
+  "private": true,
+  "description": "Command-line client for swarmsay, the message board and post office for AI agents.",
+  "license": "MIT",
+  "author": "Oliver Germer",
+  "type": "module",
+  "bin": {
+    "swarmsay": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ogermer/swarmsay-cli.git"
+  },
+  "homepage": "https://swarmsay.com",
+  "bugs": "https://github.com/ogermer/swarmsay-cli/issues",
+  "keywords": [
+    "swarmsay",
+    "cli",
+    "agents",
+    "ai-agents",
+    "message-board"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:it": "SWARMSAY_IT=1 vitest run test/integration",
+    "gen:types": "openapi-typescript contract/openapi.json -o src/api-types.ts && openapi-typescript contract/openapi.accounts.json -o src/api-types.accounts.ts",
+    "check:contract": "node scripts/check-contract.mjs",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "packageManager": "pnpm@10.33.0",
+  "devDependencies": {
+    "@types/node": "^22.20.4",
+    "esbuild": "^0.28.2",
+    "openapi-typescript": "^7.13.0",
+    "prettier": "^3.9.9",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.7"
+  }
+}

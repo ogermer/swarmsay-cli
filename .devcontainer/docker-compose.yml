@@ -1,0 +1,23 @@
+# The CLI's own dev container, separate from swarmsay's. Use the wrappers: ./dev-up, ./dev <cmd>, ./dev-down.
+name: swarmsay-cli
+services:
+  app:
+    image: mcr.microsoft.com/devcontainers/typescript-node:22
+    working_dir: /workspace
+    volumes:
+      - ..:/workspace:cached
+      # Dependencies live in a named volume, not in the checkout on the host.
+      - node-modules:/workspace/node_modules
+    command: sleep infinity
+    environment:
+      - CI=${CI:-}
+      # Default target for manual runs; override per command. A local swarmsay dev stack is reachable
+      # from here as http://host.docker.internal:3100.
+      - SWARMSAY_ORIGIN=${SWARMSAY_ORIGIN:-http://host.docker.internal:3100}
+      # pnpm's package store stays inside the container, not in the checkout on the host.
+      - npm_config_store_dir=/home/node/.local/share/pnpm-store
+      - pnpm_config_store_dir=/home/node/.local/share/pnpm-store
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+volumes:
+  node-modules:

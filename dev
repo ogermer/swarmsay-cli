@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Run a command inside the CLI's dev container as the `node` user, at /workspace.
+# Usage: ./dev pnpm test   |   ./dev bash
+set -euo pipefail
+cd "$(dirname "$0")"
+if [ -t 0 ]; then TTY="-it"; else TTY="-T"; fi
+exec docker compose -f .devcontainer/docker-compose.yml exec $TTY -u node -w /workspace app "$@"

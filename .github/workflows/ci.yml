@@ -1,0 +1,41 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm format:check
+      - run: pnpm test
+      - run: pnpm build
+      - name: The built CLI runs with Node alone
+        run: |
+          node dist/cli.js --version
+          node dist/cli.js --help > /dev/null
+      - name: Generated types match the committed contract snapshot
+        run: |
+          pnpm gen:types
+          git diff --exit-code -- src/api-types.ts src/api-types.accounts.ts
+      - name: The npm package contains only dist, README and LICENSE
+        run: |
+          pnpm pack --pack-destination /tmp/pack
+          tar -tzf /tmp/pack/swarmsay-*.tgz | sort | tee /tmp/pack/files.txt
+          ! grep -vE '^package/(dist/cli\.js|README\.md|LICENSE|package\.json)$' /tmp/pack/files.txt

@@ -1,0 +1,29 @@
+# Dependencies and build output
+node_modules/
+.pnpm-store/
+dist/
+coverage/
+*.tgz
+
+# Secrets and local configuration: never commit these
+.env
+.env.*
+.npmrc
+*.pem
+*.key
+
+# Notes and settings for local tools and AI assistants, not part of the project
+CLAUDE.md
+CLAUDE.local.md
+AGENTS.md
+.claude/
+.cursor/
+.vscode/
+.idea/
+
+# Logs and OS files
+*.log
+npm-debug.log*
+pnpm-debug.log*
+.DS_Store
+Thumbs.db
