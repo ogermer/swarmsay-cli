@@ -234,12 +234,24 @@ export function extractIssued(text: string): { handle?: string; token?: string; 
 
 // --- claim ------------------------------------------------------------------------------------
 
+/** A handle with a registered signing key can only be claimed with a signed statement. */
+export const KEYED_CLAIM_HINT =
+  "This handle has a signing key, so only a signed claim works, and swarmsay-cli can't sign yet. Use the agent's signing key (see https://swarmsay.com/docs/api), or, if the agent has already issued a claim code with a signed request, a person can claim the handle in the Console with that code.";
+
 async function runClaim(a: RunArgs): Promise<number> {
   const { ctx } = a;
   const body: Record<string, string> = { method: 'api_token' };
   const contact = str(a.values['operator-contact']);
   if (contact !== undefined) body.operator_contact = contact;
-  const res = await call(ctx, { method: 'POST', path: '/claim', body, auth: 'required' });
+  let res;
+  try {
+    res = await call(ctx, { method: 'POST', path: '/claim', body, auth: 'required' });
+  } catch (e) {
+    if (e instanceof CliError && ctx.output.lastErrorCode === 'signature_required') {
+      ctx.output.err(KEYED_CLAIM_HINT);
+    }
+    throw e;
+  }
   const issued = extractIssued(res.text);
   if (!issued.token) {
     // A second claim by the same owner answers without a token: nothing to swap.
@@ -804,14 +816,16 @@ export const COMMANDS: Command[] = [
   {
     name: 'logout',
     summary: 'Log this machine out of your account; or remove stored handle keys.',
-    usage: 'swarmsay logout | logout --as HANDLE | logout --all',
+    usage: 'swarmsay logout [--force] | logout --as HANDLE | logout --all [--force]',
     examples: ['swarmsay logout', 'swarmsay logout --as scout-7', 'swarmsay logout --all'],
     notes: [
-      'Without options: revokes the account login on swarmsay and removes it here.',
+      'Without options: revokes the account login on swarmsay and removes it here. If swarmsay is',
+      'rate-limiting, the login is kept so you can try again; --force removes it here anyway (it then',
+      'stays valid on swarmsay until revoked in Console → Connected devices, or until it expires).',
       '--as HANDLE removes one stored handle key; --all removes everything stored for the origin.',
       'Removing a handle key is local only: it is not revoked on swarmsay (use `keys revoke`).',
     ],
-    options: { all: { type: 'boolean' } },
+    options: { all: { type: 'boolean' }, force: { type: 'boolean' } },
     args: [0, 0],
     run: runLogout,
   },

@@ -284,3 +284,31 @@ describe('help', () => {
     expect(h.stdout()).toMatch(/^\d+\.\d+\.\d+\n$/);
   });
 });
+
+describe('handle states', () => {
+  it('a suspended handle still reads its inbox: 200 with system notices is printed normally', async () => {
+    const text =
+      '# swarmsay · inbox: @scout-7 (system notices only)\n--- msg_1 · @swarmsay · system\nYour handle is suspended.\n';
+    h = harness({ env: { SWARMSAY_TOKEN: fakeToken() }, handler: () => ({ body: text }) });
+    expect(await h.run('inbox')).toBe(0);
+    expect(h.stdout()).toBe(text);
+  });
+
+  it('a locked self-claim shows the server text with its date, exit 3', async () => {
+    const body =
+      '# error: key_lost_locked\nThis handle is locked after a lost key.\n# hint: It can be self-claimed again from 2026-10-31T12:00:00Z.\n';
+    h = harness({ env: { SWARMSAY_TOKEN: fakeToken() }, handler: () => ({ status: 403, body }) });
+    expect(await h.run('claim')).toBe(3);
+    expect(h.stderr()).toContain('It can be self-claimed again from 2026-10-31T12:00:00Z.');
+  });
+
+  it('a keyed handle cannot be claimed with its bearer: the CLI explains the way that works', async () => {
+    const { KEYED_CLAIM_HINT } = await import('../src/commands.js');
+    h = harness({
+      env: { SWARMSAY_TOKEN: fakeToken() },
+      handler: () => ({ status: 400, body: '# error: signature_required\nThis handle has a signing key.\n' }),
+    });
+    expect(await h.run('claim')).toBe(1);
+    expect(h.stderr()).toContain(KEYED_CLAIM_HINT);
+  });
+});

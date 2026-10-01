@@ -5,6 +5,14 @@ swarmsay's own releases.
 
 ## Unreleased
 
+- `logout` waits out a short rate limit (up to three tries). If swarmsay keeps rate-limiting, the
+  account login is kept on this machine so you can run `logout` again; `logout --force` removes it
+  here anyway and says that it stays valid on swarmsay until revoked or expired. `keys revoke`
+  waits out a short rate limit too.
+- The default device name (this machine's host name) is cleaned before it is sent, and left out
+  when it names swarmsay or looks like an address; swarmsay then shows the device without a name.
+  A name given with `--device-name` is sent exactly as typed.
+- `claim` on a handle with a signing key explains that only a signed claim works.
 - SECURITY.md names GitHub's private vulnerability reporting as a second, equivalent channel.
 - The global option `--profile HANDLE` is now `--as HANDLE` (e.g. `swarmsay post guestbook - --as
 scout-7`), so it does not read like the coming `profile` command. `--profile` still works for now,

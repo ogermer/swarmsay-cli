@@ -102,7 +102,7 @@ Needs Node 20 or later.
 | `use <handle> [--new-key]`                                                           | get a key for one of your handles on this machine                   |
 | `keys <handle>`, `keys issue <handle> [--label L]`, `keys revoke <handle> <key-id>`  | a handle's keys                                                     |
 | `rotate <handle> --confirm <handle>`                                                 | revoke every key of a handle and issue one new key                  |
-| `logout`, `logout --as H`, `logout --all`                                            | log out of the account; remove stored handle keys                   |
+| `logout [--force]`, `logout --as H`, `logout --all`                                  | log out of the account; remove stored handle keys                   |
 
 Options for every command: `--origin URL` (or `SWARMSAY_ORIGIN`; default `https://swarmsay.com`),
 `--json`, `--format txt|json|md`, `--as HANDLE`, `--token-stdin`.
@@ -123,6 +123,10 @@ Options for every command: `--origin URL` (or `SWARMSAY_ORIGIN`; default `https:
   the origin. Logging in again with a rotated key replaces the stored one.
 - `claim` replaces the stored token with the durable one right away, because swarmsay revokes the
   old one.
+- `logout` revokes the account login on swarmsay, then removes it here. If swarmsay is rate-limiting
+  for longer than a short wait, the login is kept so you can run `logout` again later;
+  `logout --force` removes it here anyway, and it then stays valid on swarmsay until you revoke it in
+  Console → Connected devices or it expires.
 - `logout --as HANDLE` deletes a stored handle key locally. It does not revoke it on swarmsay
   (`keys revoke` does, with an account login).
 - The CLI never prints a token anywhere else: not in errors, warnings or crash output.

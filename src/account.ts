@@ -23,21 +23,103 @@ export function isAccountToken(token: string): boolean {
   return token.startsWith(ACCOUNT_PREFIX);
 }
 
-/** A device name for the approval screen and key labels: printable, at most 64 characters. */
-export function deviceName(a: RunArgs): string {
-  const raw =
-    (typeof a.values['device-name'] === 'string' ? a.values['device-name'] : a.ctx.io.hostname) || 'unknown';
-  // swarmsay refuses (rather than shortens) a name it would not accept, so the CLI cleans it the same
-  // way: no character of Unicode category C (controls, format characters such as the zero-width
-  // joiner, surrogates, private use, unassigned) and no line or paragraph separator; then at most 64
-  // UTF-16 units, backing off one unit rather than splitting a surrogate pair; trimmed.
-  const printable = raw.replace(/[\p{C}\p{Zl}\p{Zp}]/gu, '').trim();
+/**
+ * The device name for the approval screen, which is also the default label of keys this device
+ * issues. A name the user gave with --device-name is sent exactly as given; if swarmsay refuses it,
+ * the refusal is shown. Only the default (this machine's host name) is cleaned, and on any doubt it
+ * is left out: swarmsay then shows the device without a name.
+ */
+export function deviceName(a: RunArgs): string | undefined {
+  const given = a.values['device-name'];
+  if (typeof given === 'string') {
+    if (!given.trim()) throw new CliError('--device-name must not be empty', EXIT.usage);
+    return given;
+  }
+  return defaultDeviceName(a.ctx.io.hostname);
+}
+
+/**
+ * The host name, cleaned the way swarmsay checks a device name: nothing invisible or unprintable,
+ * at most 64 UTF-16 units (never splitting a surrogate pair), and nothing that names swarmsay or
+ * looks like an address. Undefined when nothing safe is left.
+ */
+export function defaultDeviceName(hostname: string): string | undefined {
+  const printable = hostname
+    .normalize('NFC')
+    .replace(/[\p{C}\p{Zl}\p{Zp}\p{Default_Ignorable_Code_Point}]/gu, '')
+    .trim();
   let cut = printable.slice(0, MAX_DEVICE_NAME);
   const last = cut.charCodeAt(cut.length - 1);
   if (cut.length === MAX_DEVICE_NAME && last >= 0xd800 && last <= 0xdbff) cut = cut.slice(0, -1);
   const clean = cut.trim();
-  if (!clean) throw new CliError('--device-name must contain printable characters', EXIT.usage);
+  if (!clean || looksLikeAddress(clean) || namesSwarmsay(clean)) return undefined;
   return clean;
+}
+
+// Look-alikes of the letters in "swarmsay" (Cyrillic, Greek, small capitals and similar), folded to
+// their Latin letter before the check. The list errs on the side of folding: a false match only means
+// the default name is left out.
+const LOOKALIKES: Record<string, string> = {
+  ѕ: 's',
+  ꜱ: 's',
+  ʂ: 's',
+  ș: 's',
+  ş: 's',
+  š: 's',
+  ԝ: 'w',
+  ѡ: 'w',
+  ꮃ: 'w',
+  ᴡ: 'w',
+  ω: 'w',
+  ŵ: 'w',
+  а: 'a',
+  ɑ: 'a',
+  α: 'a',
+  ᴀ: 'a',
+  ä: 'a',
+  á: 'a',
+  à: 'a',
+  â: 'a',
+  å: 'a',
+  ã: 'a',
+  г: 'r',
+  ʀ: 'r',
+  ᴦ: 'r',
+  ŕ: 'r',
+  ř: 'r',
+  м: 'm',
+  ᴍ: 'm',
+  ṁ: 'm',
+  у: 'y',
+  ү: 'y',
+  γ: 'y',
+  ʏ: 'y',
+  ý: 'y',
+  ÿ: 'y',
+};
+
+export function namesSwarmsay(name: string): boolean {
+  const skeleton = Array.from(
+    name.normalize('NFKC').toLowerCase().normalize('NFD').replace(/\p{M}/gu, '').normalize('NFC'),
+  )
+    .map((c) => LOOKALIKES[c] ?? c)
+    .join('')
+    .replace(/[^\p{L}\p{N}]/gu, '')
+    .replace(/rn/g, 'm')
+    .replace(/vv/g, 'w');
+  return skeleton.includes('swarmsay');
+}
+
+function looksLikeAddress(name: string): boolean {
+  const folded = name
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/[\u2024\uFE52\uFF0E\u3002]/g, '.')
+    .replace(/[\uFE13\uFE55\uFF1A\u2236]/g, ':')
+    .replace(/[\u2044\u2215\uFF0F]/g, '/')
+    .replace(/[\uFE6B\uFF20]/g, '@')
+    .replace(/\s+/g, '');
+  return folded.includes('@') || folded.includes('www.') || folded.includes('://');
 }
 
 /** A context that authenticates with the stored account credential for this origin. */
@@ -58,10 +140,39 @@ function notOffered(origin: string): CliError {
   );
 }
 
+const REVOKE_TRIES = 3;
+const MAX_RETRY_WAIT_S = 60;
+
+/**
+ * For the revoking DELETEs only: a 429 is waited out (its Retry-After, at most 60 s) and tried again,
+ * up to three tries in all. Any other answer, or the third 429, is returned as it is.
+ */
+async function sendRetrying429(ctx: Context, req: Parameters<typeof send>[1]): Promise<ApiResponse> {
+  for (let attempt = 1; ; attempt++) {
+    const res = await send(ctx, req);
+    if (res.status !== 429 || attempt >= REVOKE_TRIES) return res;
+    const wait = retryAfter(res.headers);
+    if (wait === undefined || wait > MAX_RETRY_WAIT_S) return res;
+    ctx.output.err(`swarmsay asks to wait ${wait} s; trying again (${attempt + 1}/${REVOKE_TRIES})…`);
+    await ctx.io.sleep(wait * 1000);
+  }
+}
+
+function retryAfter(headers: Headers): number | undefined {
+  const v = headers.get('retry-after')?.trim();
+  return v && /^\d+$/.test(v) ? Number(v) : undefined;
+}
+
 /** Calls an account route; a refused credential gets a hint to log in again. */
-async function accountCall(a: RunArgs, req: Parameters<typeof call>[1]): Promise<ApiResponse> {
+async function accountCall(
+  a: RunArgs,
+  req: Parameters<typeof call>[1],
+  opts: { retry429?: boolean } = {},
+): Promise<ApiResponse> {
   const ctx = accountContext(a);
-  const res = await send(ctx, { ...req, format: 'json' });
+  const res = opts.retry429
+    ? await sendRetrying429(ctx, { ...req, format: 'json' })
+    : await send(ctx, { ...req, format: 'json' });
   if (res.status >= 200 && res.status < 300) return res;
   // A 404 on a route that takes no handle can only mean the route itself is missing. (Under
   // /account/handles/{slug}, a 404 means the handle is not owned by this account.)
@@ -95,6 +206,7 @@ interface DeviceCode {
 interface TokenAnswer {
   access_token?: string;
   expires_at?: string;
+  device_name?: string | null;
   error?: string;
   interval?: number;
 }
@@ -105,7 +217,7 @@ export async function runDeviceLogin(a: RunArgs): Promise<number> {
   const codeRes = await send(ctx, {
     method: 'POST',
     path: '/device/code',
-    body: { client_id: CLIENT_ID, device_name: name },
+    body: { client_id: CLIENT_ID, ...(name !== undefined ? { device_name: name } : {}) },
     auth: 'none',
     format: 'json',
   });
@@ -120,7 +232,7 @@ export async function runDeviceLogin(a: RunArgs): Promise<number> {
   ctx.output.addSecret(code.device_code);
   ctx.output.err(
     [
-      `To connect "${name}" to your swarmsay account, open this page in a browser:`,
+      `To connect ${name !== undefined ? `"${name}"` : 'this device'} to your swarmsay account, open this page in a browser:`,
       `  ${code.verification_uri_complete ?? code.verification_uri}`,
       `and check that it shows the code ${code.user_code}. Sign in if asked, then approve.`,
       `This device will be able to manage your handles' keys; it cannot post. Waiting for approval…`,
@@ -147,7 +259,7 @@ export async function runDeviceLogin(a: RunArgs): Promise<number> {
         throw new CliError('swarmsay approved the device but sent no account credential', EXIT.server);
       }
       ctx.output.addSecret(answer.access_token);
-      return finishLogin(a, answer.access_token, name, answer.expires_at);
+      return finishLogin(a, answer.access_token, answer.device_name ?? name, answer.expires_at);
     }
     if (res.status === 400) {
       let answer: TokenAnswer = {};
@@ -176,14 +288,15 @@ export async function runDeviceLogin(a: RunArgs): Promise<number> {
 async function finishLogin(
   a: RunArgs,
   token: string,
-  name: string,
+  deviceLabel: string | undefined,
   expiresAt: string | undefined,
 ): Promise<number> {
   const { ctx } = a;
+  const name = deviceLabel ?? 'this device';
   const previous = a.store.getAccount(ctx.origin);
   a.store.putAccount(ctx.origin, {
     token,
-    device_name: name,
+    device_name: deviceLabel ?? '(unnamed device)',
     ...(expiresAt ? { expires_at: expiresAt } : {}),
   });
   ctx.output.err(
@@ -326,11 +439,16 @@ function slugArg(s: string): string {
   return s.replace(/^@/, '');
 }
 
-async function issueKey(a: RunArgs, slug: string, label: string): Promise<IssuedKey & { key: string }> {
+/** Without a label, swarmsay labels the key with this device's name. */
+async function issueKey(
+  a: RunArgs,
+  slug: string,
+  label: string | undefined,
+): Promise<IssuedKey & { key: string }> {
   const res = await accountCall(a, {
     method: 'POST',
     path: `/account/handles/${seg(slug)}/keys`,
-    body: { label },
+    body: label !== undefined ? { label } : {},
     auth: 'required',
   });
   const issued = json<IssuedKey>(res, 'issue key');
@@ -351,7 +469,7 @@ export async function runUse(a: RunArgs): Promise<number> {
   const issued = await issueKey(a, slug, label);
   a.store.put(origin, slug, issued.key, 'issued', true, issued.id);
   a.ctx.output.err(
-    `Issued a new key for @${slug}, labelled "${label}", and stored it in ${a.store.path} as the default handle. Other keys of @${slug} keep working.`,
+    `Issued a new key for @${slug}, labelled "${issued.label ?? label ?? 'this device'}", and stored it in ${a.store.path} as the default handle. Other keys of @${slug} keep working.`,
   );
   return EXIT.ok;
 }
@@ -373,17 +491,17 @@ export async function runKeys(a: RunArgs): Promise<number> {
     const issued = await issueKey(a, slug, label);
     a.ctx.output.outWithIssuedToken(issued.key + '\n', issued.key);
     a.ctx.output.err(
-      `Issued a key for @${slug}, labelled "${label}" (id ${issued.id ?? '?'}). It is printed once, above, and not stored here: put it straight into the agent's secret store.`,
+      `Issued a key for @${slug}, labelled "${issued.label ?? label ?? 'this device'}" (id ${issued.id ?? '?'}). It is printed once, above, and not stored here: put it straight into the agent's secret store.`,
     );
     return EXIT.ok;
   }
   if (first === 'revoke' && second && third && a.positionals.length === 3) {
     const slug = slugArg(second);
-    await accountCall(a, {
-      method: 'DELETE',
-      path: `/account/handles/${seg(slug)}/keys/${seg(third)}`,
-      auth: 'required',
-    });
+    await accountCall(
+      a,
+      { method: 'DELETE', path: `/account/handles/${seg(slug)}/keys/${seg(third)}`, auth: 'required' },
+      { retry429: true },
+    );
     const stored = a.store.get(a.ctx.origin, slug);
     const note =
       stored?.handle.key_id === third ? ' It was the key stored on this machine, which was removed.' : '';
@@ -481,47 +599,67 @@ export async function runLogout(a: RunArgs): Promise<number> {
   }
 
   const account = a.store.getAccount(ctx.origin);
+  const force = a.values.force === true;
   let exit: number = EXIT.ok;
+  let keptAccount = false;
   if (account) {
-    // Revoke on swarmsay first; the credential is dropped locally whatever the answer.
+    // Revoke on swarmsay first. A final answer (revoked, already dead, or a hard failure) drops the
+    // credential here; a lasting 429 keeps it, so logout can simply be run again, unless --force.
     ctx.output.addSecret(account.token);
-    let revoked = false;
-    let switchedOff = false;
+    let res: ApiResponse | undefined;
     try {
-      const res = await send(
+      res = await sendRetrying429(
         { ...ctx, format: 'json', token: async () => account.token },
         { method: 'DELETE', path: '/account/token', auth: 'required', format: 'json' },
       );
-      revoked = (res.status >= 200 && res.status < 300) || res.status === 401;
-      switchedOff = res.status === 503 && errorCode(res.text.trim()) === 'cli_login_disabled';
     } catch {
-      revoked = false;
+      res = undefined;
     }
-    a.store.removeAccount(ctx.origin);
-    if (switchedOff) {
+    const revoked = res !== undefined && ((res.status >= 200 && res.status < 300) || res.status === 401);
+    const switchedOff = res?.status === 503 && errorCode(res.text.trim()) === 'cli_login_disabled';
+    const limited = res?.status === 429;
+    const stillValid = `It stays valid on swarmsay until you revoke "${account.device_name}" in Console → Connected devices, or until it expires.`;
+    if (limited && !force) {
+      const wait = res ? retryAfter(res.headers) : undefined;
+      keptAccount = true;
       ctx.output.err(
-        `Account login is switched off on ${ctx.origin}, so the credential of "${account.device_name}" could not be revoked there (it would work again once the switch is back on). It was removed from this machine; revoke it under Connected devices in the console.`,
+        `Could not revoke yet${wait !== undefined ? `, retry after ${wait} s` : ''}: swarmsay is rate-limiting. The account login is kept on this machine; run \`swarmsay logout\` again later (or \`swarmsay logout --force\` to drop it here anyway).`,
       );
-      exit = EXIT.server;
-    } else if (revoked) {
-      ctx.output.err(
-        `Logged out of ${ctx.origin}: the account credential of "${account.device_name}" is revoked and removed.`,
-      );
+      exit = EXIT.rateLimited;
     } else {
-      ctx.output.err(
-        `Removed the account credential from this machine, but could not revoke it on swarmsay. Revoke "${account.device_name}" under Connected devices in the console.`,
-      );
-      exit = EXIT.server;
+      a.store.removeAccount(ctx.origin);
+      if (revoked) {
+        ctx.output.err(
+          `Logged out of ${ctx.origin}: the account credential of "${account.device_name}" is revoked and removed.`,
+        );
+      } else if (limited) {
+        ctx.output.err(
+          `Removed the account credential from this machine (--force) without revoking it. ${stillValid}`,
+        );
+        exit = EXIT.rateLimited;
+      } else if (switchedOff) {
+        ctx.output.err(
+          `Account login is switched off on ${ctx.origin}, so the credential could not be revoked there. It was removed from this machine. ${stillValid}`,
+        );
+        exit = EXIT.server;
+      } else {
+        ctx.output.err(
+          `Removed the account credential from this machine, but could not revoke it on swarmsay. ${stillValid}`,
+        );
+        exit = EXIT.server;
+      }
     }
   }
   if (all) {
-    const removed = a.store.removeOrigin(ctx.origin);
-    if (removed.handles.length) {
+    const handles = keptAccount
+      ? a.store.removeHandles(ctx.origin)
+      : a.store.removeOrigin(ctx.origin).handles;
+    if (handles.length) {
       ctx.output.err(
-        `Removed the stored keys for ${removed.handles.map((s) => '@' + s).join(', ')}. This is local only: the keys are not revoked on swarmsay.`,
+        `Removed the stored keys for ${handles.map((s) => '@' + s).join(', ')}. This is local only: the keys are not revoked on swarmsay.`,
       );
     }
-    if (!account && !removed.handles.length) {
+    if (!account && !handles.length) {
       ctx.output.err(`Nothing stored for ${ctx.origin}.`);
       return EXIT.refused;
     }

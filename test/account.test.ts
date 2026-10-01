@@ -142,8 +142,9 @@ describe('login: the device flow', () => {
     expect(await sentName('👩\u200d💻 dev')).toBe('👩💻 dev');
   });
 
-  it('keeps non-ASCII and variation selectors', async () => {
-    expect(await sentName('Grüße 中 ❤\ufe0f')).toBe('Grüße 中 ❤\ufe0f');
+  it('keeps non-ASCII letters, drops variation selectors', async () => {
+    // Variation selectors are invisible, so swarmsay refuses them: the default drops them.
+    expect(await sentName('Grüße 中 ❤\ufe0f')).toBe('Grüße 中 ❤');
   });
 
   it('whatever the host name, the result passes the server rule', async () => {
@@ -161,10 +162,52 @@ describe('login: the device flow', () => {
     }
   });
 
-  it('--device-name with nothing printable is a usage error', async () => {
+  it('--device-name is sent exactly as given; a refusal is shown as it is', async () => {
+    h = server({
+      'POST /device/code': j(
+        { error: 'invalid_request', message: 'device_name may not name swarmsay.' },
+        400,
+      ),
+    });
+    expect(await h.run('login', '--device-name', 'my swarmsay box\u200b')).toBe(1);
+    expect(JSON.parse(h.calls[0]!.body!).device_name).toBe('my swarmsay box\u200b');
+    expect(h.stderr()).toMatch(/device_name may not name swarmsay/);
+  });
+
+  it('an empty --device-name is a usage error', async () => {
     h = server({});
-    expect(await h.run('login', '--device-name', '\u0001\u0002  ')).toBe(2);
+    expect(await h.run('login', '--device-name', '   ')).toBe(2);
     expect(h.calls).toHaveLength(0);
+  });
+
+  it('a default name that names swarmsay or looks like an address is left out', async () => {
+    for (const host of [
+      'swarmsay',
+      'SwarmSay-prod-1',
+      'sw\u0430rms\u0430y',
+      'swarrnsay',
+      'swa.rm-say',
+      'svvarmsay',
+      'ops@box',
+      'www.box',
+      'http://box',
+      '\u200d\u2060',
+    ]) {
+      h = server({
+        'POST /device/code': j(DEVICE_CODE),
+        'POST /device/token': j({ access_token: accountToken(), device_name: null }),
+      });
+      h.io.hostname = host;
+      expect(await h.run('login'), host).toBe(0);
+      expect(JSON.parse(h.calls[0]!.body!), host).not.toHaveProperty('device_name');
+      expect(h.stderr()).toMatch(/To connect this device/);
+      h.cleanup();
+    }
+  });
+
+  it('an ordinary host name is kept', async () => {
+    expect(await sentName('build-runner-07.local')).toBe('build-runner-07.local');
+    expect(await sentName('swarm-lab')).toBe('swarm-lab');
   });
 
   it('invalid_request from device/code is reported as a refusal', async () => {
@@ -571,6 +614,83 @@ describe('an instance without the account routes', () => {
   it('a 404 under a handle still means "not yours or missing"', async () => {
     loggedIn({});
     expect(await h.run('keys', 'someone-else')).toBe(1);
+    expect(h.stderr()).not.toMatch(/does not offer account login/);
+  });
+});
+
+describe('rate limits on revoking', () => {
+  const limited = (s = '7'): Reply => ({
+    status: 429,
+    headers: { 'retry-after': s },
+    body: JSON.stringify({ error: 'rate_limited', message: 'slow down' }),
+  });
+
+  it('logout waits out a 429 and revokes on the next try', async () => {
+    const answers: Reply[] = [limited('7'), { status: 204 }];
+    loggedIn({ 'DELETE /account/token': () => answers.shift()! });
+    const slept: number[] = [];
+    h.io.sleep = async (ms) => void slept.push(ms);
+    expect(await h.run('logout')).toBe(0);
+    expect(slept).toEqual([7000]);
+    expect(store().getAccount(ORIGIN)).toBeUndefined();
+  });
+
+  it('a lasting 429 keeps the login here, says when to retry, exit 4', async () => {
+    const { token } = loggedIn({ 'DELETE /account/token': limited('9') });
+    expect(await h.run('logout')).toBe(4);
+    expect(h.calls).toHaveLength(3);
+    expect(store().getAccount(ORIGIN)?.token).toBe(token);
+    expect(h.stderr()).toMatch(/Could not revoke yet, retry after 9 s/);
+    expect(h.stderr()).not.toMatch(/revoked and removed/);
+  });
+
+  it('--force drops it here anyway and says it stays valid on swarmsay', async () => {
+    loggedIn({ 'DELETE /account/token': limited('9') });
+    expect(await h.run('logout', '--force')).toBe(4);
+    expect(store().getAccount(ORIGIN)).toBeUndefined();
+    expect(h.stderr()).toMatch(
+      /stays valid on swarmsay until you revoke .* Console → Connected devices, or until it expires/,
+    );
+  });
+
+  it('--all with a lasting 429 removes the handle keys but keeps the login', async () => {
+    loggedIn({ 'DELETE /account/token': limited('9') });
+    store().put(ORIGIN, 'a', fakeToken(), 'issued', true);
+    expect(await h.run('logout', '--all')).toBe(4);
+    expect(store().list(ORIGIN).handles).toEqual({});
+    expect(store().getAccount(ORIGIN)).toBeDefined();
+  });
+
+  it('a Retry-After above 60 s is not waited out', async () => {
+    loggedIn({ 'DELETE /account/token': limited('600') });
+    expect(await h.run('logout')).toBe(4);
+    expect(h.calls).toHaveLength(1);
+  });
+
+  it('keys revoke waits out a 429 too', async () => {
+    const answers: Reply[] = [limited('3'), j({ revoked: 'key_2' })];
+    loggedIn({ 'DELETE /account/handles/scout-7/keys/key_2': () => answers.shift()! });
+    expect(await h.run('keys', 'revoke', 'scout-7', 'key_2')).toBe(0);
+    expect(h.calls).toHaveLength(2);
+  });
+
+  it('other account routes do not retry a 429', async () => {
+    loggedIn({ 'GET /account/handles': limited('5') });
+    expect(await h.run('handles')).toBe(4);
+    expect(h.calls).toHaveLength(1);
+  });
+});
+
+describe('v0.1.64 answers', () => {
+  it('405 method_not_allowed is a refusal, not "does not offer account login"', async () => {
+    loggedIn({
+      'GET /account/handles': {
+        status: 405,
+        headers: { allow: 'POST' },
+        body: JSON.stringify({ error: 'method_not_allowed', message: 'x', hint: 'Allowed: POST' }),
+      },
+    });
+    expect(await h.run('handles')).toBe(1);
     expect(h.stderr()).not.toMatch(/does not offer account login/);
   });
 });

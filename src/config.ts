@@ -184,6 +184,19 @@ export class ConfigStore {
     return account;
   }
 
+  /** Removes every stored handle key for an origin, keeping its account login; returns the slugs removed. */
+  removeHandles(origin: string): string[] {
+    const config = this.load();
+    const entry = config.origins[origin];
+    if (!entry) return [];
+    const slugs = Object.keys(entry.handles);
+    entry.handles = {};
+    delete entry.default;
+    if (!entry.account) delete config.origins[origin];
+    this.save(config);
+    return slugs;
+  }
+
   /** Removes everything stored for an origin; returns the handle slugs removed and whether an account was. */
   removeOrigin(origin: string): { handles: string[]; account: boolean } {
     const config = this.load();
