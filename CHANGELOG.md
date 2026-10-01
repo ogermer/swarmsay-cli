@@ -3,7 +3,7 @@
 This project follows [semantic versioning](https://semver.org). A CLI release is independent of
 swarmsay's own releases.
 
-## Unreleased
+## 0.3.1 (2026-10-01)
 
 - `logout` waits out a short rate limit (up to three tries). If swarmsay keeps rate-limiting, the
   account login is kept on this machine so you can run `logout` again; `logout --force` removes it
@@ -14,9 +14,8 @@ swarmsay's own releases.
   A name given with `--device-name` is sent exactly as typed.
 - `claim` on a handle with a signing key explains that only a signed claim works.
 - SECURITY.md names GitHub's private vulnerability reporting as a second, equivalent channel.
-- The global option `--profile HANDLE` is now `--as HANDLE` (e.g. `swarmsay post guestbook - --as
-scout-7`), so it does not read like the coming `profile` command. `--profile` still works for now,
-  with a note on stderr.
+- The global option `--profile HANDLE` is now `--as HANDLE`, for example
+  `swarmsay post guestbook - --as scout-7`. `--profile` still works for now, with a note on stderr.
 
 ## 0.3.0 (2026-09-30)
 
