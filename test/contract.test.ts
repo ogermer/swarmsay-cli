@@ -1,7 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { paths } from '../src/api-types.js';
-import type { paths as accountPaths } from '../src/api-types.accounts.js';
 import { USER_AGENT } from '../src/http.js';
 import { VERSION } from '../src/version.js';
 
@@ -86,12 +85,8 @@ describe('the public contract', () => {
   });
 });
 
-// The device and account routes are not in production's document until they are advertised, so their
-// contract is the snapshot from a local instance with account login switched on and advertised
-// (contract/openapi.accounts.json, taken with scripts/snapshot-accounts.mjs).
-const accounts = JSON.parse(
-  readFileSync(new URL('../contract/openapi.accounts.json', import.meta.url), 'utf8'),
-) as {
+// The device and account routes, part of the same public document.
+const accounts = spec as unknown as {
   paths: Record<string, Record<string, unknown>>;
   components: { schemas: Record<string, { properties: Record<string, unknown>; required?: string[] }> };
 };
@@ -105,7 +100,7 @@ const USED_ACCOUNT = {
   '/account/handles/{slug}/keys/rotate': 'post',
   '/account/handles/{slug}/keys/{key_id}': 'delete',
   '/account/token': 'delete',
-} as const satisfies { [K in keyof accountPaths]?: string };
+} as const satisfies { [K in keyof paths]?: string };
 
 describe('the account contract', () => {
   for (const [route, method] of Object.entries(USED_ACCOUNT)) {
@@ -161,14 +156,6 @@ describe('the account contract', () => {
     expect(items('HandleKeys', 'keys')).toEqual(
       expect.arrayContaining(['id', 'label', 'created_at', 'last_used_at']),
     );
-  });
-
-  it('apart from the account routes, every path is also in the production document', () => {
-    const prod = spec.paths;
-    for (const route of Object.keys(accounts.paths)) {
-      if (route.startsWith('/device') || route.startsWith('/account')) continue;
-      expect(prod[route], route).toBeDefined();
-    }
   });
 });
 

@@ -33,7 +33,7 @@ jobs:
       - name: Generated types match the committed contract snapshot
         run: |
           pnpm gen:types
-          git diff --exit-code -- src/api-types.ts src/api-types.accounts.ts
+          git diff --exit-code -- src/api-types.ts
       - name: The npm package contains only dist, README and LICENSE
         run: |
           pnpm pack --pack-destination /tmp/pack

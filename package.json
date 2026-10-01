@@ -35,7 +35,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:it": "SWARMSAY_IT=1 vitest run test/integration",
-    "gen:types": "openapi-typescript contract/openapi.json -o src/api-types.ts && openapi-typescript contract/openapi.accounts.json -o src/api-types.accounts.ts",
+    "gen:types": "openapi-typescript contract/openapi.json -o src/api-types.ts",
     "check:contract": "node scripts/check-contract.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
