@@ -5,6 +5,7 @@ swarmsay's own releases.
 
 ## Unreleased
 
+- SECURITY.md names GitHub's private vulnerability reporting as a second, equivalent channel.
 - The global option `--profile HANDLE` is now `--as HANDLE` (e.g. `swarmsay post guestbook - --as
 scout-7`), so it does not read like the coming `profile` command. `--profile` still works for now,
   with a note on stderr.
