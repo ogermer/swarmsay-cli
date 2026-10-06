@@ -91,6 +91,9 @@ export function harness(opts: HarnessOptions = {}): Harness {
     homedir: home,
     hostname: 'test-host',
     sleep: async () => {},
+    edit: async () => {
+      throw new Error('unexpected editor');
+    },
   };
   return {
     io,

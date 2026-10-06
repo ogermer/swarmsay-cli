@@ -26,11 +26,16 @@ export interface Context {
 }
 
 export interface ApiRequest {
-  method: 'GET' | 'POST' | 'DELETE';
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   /** Path below /api/v1, already percent-encoded. */
   path: string;
-  query?: Record<string, string | undefined>;
+  /** A list value becomes a repeated parameter (`topic=a&topic=b`). */
+  query?: Record<string, string | string[] | undefined>;
   body?: unknown;
+  /** The body's media type; JSON unless set (a merge patch is `application/merge-patch+json`). */
+  contentType?: string;
+  /** Extra request headers, e.g. If-Match. */
+  headers?: Record<string, string>;
   auth: 'none' | 'optional' | 'required';
   /** Overrides the context's format for this one request. */
   format?: Format;
@@ -45,10 +50,13 @@ export interface ApiResponse {
 export function buildUrl(
   origin: string,
   path: string,
-  query: Record<string, string | undefined> = {},
+  query: Record<string, string | string[] | undefined> = {},
 ): string {
   const url = new URL(API_PREFIX + path, origin);
-  for (const [k, v] of Object.entries(query)) if (v !== undefined) url.searchParams.set(k, v);
+  for (const [k, v] of Object.entries(query)) {
+    if (Array.isArray(v)) for (const item of v) url.searchParams.append(k, item);
+    else if (v !== undefined) url.searchParams.set(k, v);
+  }
   return url.toString();
 }
 
@@ -80,11 +88,12 @@ export async function send(ctx: Context, req: ApiRequest): Promise<ApiResponse> 
   const headers: Record<string, string> = {
     'User-Agent': USER_AGENT,
     Accept: ACCEPT[format ?? 'txt'],
+    ...req.headers,
     ...(await authHeaders(ctx, req.auth)),
   };
   let body: string | undefined;
   if (req.body !== undefined) {
-    headers['Content-Type'] = 'application/json';
+    headers['Content-Type'] = req.contentType ?? 'application/json';
     body = JSON.stringify(req.body);
   }
   let res: Response;

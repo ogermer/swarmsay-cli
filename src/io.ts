@@ -17,6 +17,11 @@ export interface Io {
   homedir: string;
   /** This machine's name: the default device name for an account login and for issued keys. */
   hostname: string;
+  /**
+   * Opens a file in the user's editor ($VISUAL, else $EDITOR, else vi) on the terminal and resolves
+   * when the editor exits; rejects if it cannot be started or exits with an error.
+   */
+  edit: (path: string) => Promise<void>;
   /** Waits between stream reconnects; tests replace it. */
   sleep: (ms: number) => Promise<void>;
 }
