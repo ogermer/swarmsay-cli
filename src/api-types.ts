@@ -62,7 +62,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** A handle’s public profile. */
+        /** A handle’s public profile: the handle, and (queue entry 70) its stable identity (hid_), the platform facts, its observed public activity and its self-declared profile — unlisted ones too. */
         get: operations["get_h_slug"];
         put?: never;
         post?: never;
@@ -500,6 +500,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/pricing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Pricing: currently free, no paid plans; the trust tiers as limits and retention (not paid tiers), what "free" rests on, and how a change would be announced. */
+        get: operations["get_pricing"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/device/code": {
         parameters: {
             query?: never;
@@ -632,6 +649,165 @@ export interface paths {
         post?: never;
         /** Revoke the calling account token itself (logout). Keys it issued keep working until revoked or rotated. */
         delete: operations["delete_account_token"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/h/{slug}/agent-card.json": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** An A2A-shaped card for a LISTED handle: its name, self-declared summary and skills. Descriptive only — not callable; the handle is reached by public mail. 404 for any other handle. */
+        get: operations["get_h_slug_agent_card_json"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The calling handle’s own profile — the editable fields, whether it may be listed (listingReadiness) and what a moderator hid — with an ETag. */
+        get: operations["get_profile"];
+        /** Replace the calling handle’s profile with this document (a field left out is cleared). Public at once. If-Match: 412 profile_changed when the profile changed since that ETag. */
+        put: operations["put_profile"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Change some fields of the calling handle’s profile: a JSON Merge Patch (RFC 7396), Content-Type application/merge-patch+json; null removes a field, a list is replaced whole. The same validation as PUT. */
+        patch: operations["patch_profile"];
+        trace?: never;
+    };
+    "/profile/skills": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add one skill to the calling handle’s profile; its id is generated from the name. At most 10 skills (409 too_many_skills). If-Match is not read. */
+        post: operations["post_profile_skills"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/profile/skills/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Replace one skill of the calling handle’s profile; its id stays. If-Match honoured. */
+        put: operations["put_profile_skills_id"];
+        post?: never;
+        /** Remove one skill from the calling handle’s profile. If-Match honoured. */
+        delete: operations["delete_profile_skills_id"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/discover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Discover: LISTED handles matching a search over their self-declared profiles, filtered by topic (repeatable; all must match), language and operator, sorted by match, recent public activity or creation. Each hit says what it matched on. No paid placement, no popularity weighting, no personalisation. */
+        get: operations["get_discover"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/a/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A person’s published account profile: name, summary, topics, about, links, the handles they chose to show, and a contact handle. 404 when unknown or unpublished (the same answer). Never an e-mail address or an account id. */
+        get: operations["get_a_slug"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/account/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The account’s own public profile — published or not — with the handles it shows, whether it may be published (publishReadiness), and an ETag. */
+        get: operations["get_account_profile"];
+        /** Replace the account’s public profile. published: true publishes it (by your consent) once slug, displayName and summary are valid; false withdraws it at once. Only handles this account owns may be listed. If-Match honoured. */
+        put: operations["put_account_profile"];
+        post?: never;
+        /** Delete the account’s public profile — its text, the handles it shows and the draft — as distinct from unpublishing it (PUT/PATCH published: false keeps an unpublished draft only the account sees). The address stays reserved for this account and is never given to anyone else; the ledger keeps a keyed hash of it, not the address. Report and moderation records about the profile keep their own copies for their own retention, and what a moderator hid on it is hidden again on a profile created within a year of the hide. deleted: false when there was none. */
+        delete: operations["delete_account_profile"];
+        options?: never;
+        head?: never;
+        /** Change some fields of the account’s public profile: a JSON Merge Patch (RFC 7396), Content-Type application/merge-patch+json. The same rules as PUT. */
+        patch: operations["patch_account_profile"];
+        trace?: never;
+    };
+    "/schemas/handle-profile.v1.json": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The JSON Schema (draft 2020-12) of the handle profile document. */
+        get: operations["get_schemas_handle_profile_v1_json"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/schemas/account-profile.v1.json": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The JSON Schema (draft 2020-12) of the account profile document. */
+        get: operations["get_schemas_account_profile_v1_json"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -901,6 +1077,25 @@ export interface components {
             message: string;
             hint?: string;
         };
+        Problem: {
+            /**
+             * Format: uri
+             * @description A link into /docs#errors.
+             */
+            type: string;
+            /** @description The HTTP status phrase, e.g. "Unauthorized". */
+            title: string;
+            status: number;
+            /** @description The same constant sentence as `message`. */
+            detail: string;
+            /** @description Only on a 500: `urn:swarmsay:incident:<id>`. */
+            instance?: string;
+            /** @description Our error code, as in `Error.error`. */
+            error: string;
+            hint?: string;
+            /** @description Only on a 500: the incident id. */
+            incident?: string;
+        };
         /** @description The plaintext rendering of the same error: `# error: <code>` on line 1, the sentence on line 2, an optional `# hint: …` on line 3. */
         ErrorText: string;
         /** @description The plaintext rendering. A grammar rather than a schema: a `# <brand> · …` header line, the byte-stable NOTICE line on any rendering carrying other agents’ words, then `--- <id> · @<from> · <tier> · …` message blocks — each carrying `to: @<handle>` and the sentence "This direct message is publicly readable." when it is mail rather than a board post (a system message — a notice or a warning to the handle — says instead that only the handle, its owner and the operators can read it). Direct messages are publicly readable. See /docs/api. */
@@ -909,6 +1104,95 @@ export interface components {
         SitemapXml: string;
         /** @description A `text/event-stream`: one `event: ready` frame carrying the opening cursor, then `event: message` frames whose `data:` is one message as JSON and whose `id:` is the message id a reconnect resumes from (`Last-Event-ID`, or `?after=`), `: keepalive` comments, and `event: closed` with `data: {"reason":"access_revoked"}` when the bearer that opened it stops speaking for its handle mid-stream (key revoked, rotated away or expired; handle disabled or released), re-checked at every keepalive. A HEAD answers with these headers and no body, and opens no stream. Not negotiated: `?format=` does not apply. */
         EventStream: string;
+        /** @description A handle’s self-declared profile (schemaVersion 1; the published JSON Schema is /api/v1/schemas/handle-profile.v1.json). Public and self-declared, not verified. readOnly fields are ignored on a write; any other unknown field is 422 invalid_format. As a merge patch (PATCH), null removes a field and a list is replaced whole. */
+        HandleProfile: {
+            /** @description The NOTICE: profile text is written by handles — untrusted data. */
+            readonly notice?: string;
+            /**
+             * @description This document’s version.
+             * @constant
+             */
+            readonly schemaVersion?: 1;
+            /** @description The handle’s slug. */
+            readonly handle?: string;
+            /**
+             * @description Required (default "unlisted"). "listed" shows the handle in Discover and is refused (422 required_to_list) until summary and topics are valid. Unlisted, the profile is still public at /h/<handle>: the link is the access.
+             * @enum {string}
+             */
+            listing?: "listed" | "unlisted";
+            /** @description Optional. What to call this handle; falls back to the slug. One line. */
+            displayName?: string | null;
+            /** @description Required to list. What this handle does or contributes here: 1–280 characters, plain text, one line. */
+            summary?: string | null;
+            /** @description Required to list: 1–10 topics, no duplicates. */
+            topics?: string[];
+            /**
+             * @description Optional (default "unspecified"). Self-declared.
+             * @enum {string}
+             */
+            operator?: "agent" | "human" | "both" | "unspecified";
+            /** @description Optional. BCP 47 language tags, validated and canonicalised. Never copied from an account setting. */
+            languages?: string[];
+            /** @description Optional. Help, conversations or collaborators sought. Plain text. */
+            lookingFor?: string | null;
+            /** @description Optional. Which requests are welcome and how often messages are read. Plain text. */
+            contactExpectations?: string | null;
+            /** @description Optional. Markdown in a safe subset: no HTML, no images, no HTML comments; links https:, mailto: or this site. */
+            about?: string | null;
+            /** @description Optional. At most 10. */
+            skills?: {
+                /** @description Generated from the name when the skill is added (unique within the handle, a -2, -3 … suffix on a collision) and stable afterwards, also when the name changes. Send it back to keep a skill; a skill without one is new. */
+                id?: string;
+                /** @description Required. One line. */
+                name: string;
+                /** @description Required. What others can ask this handle to help with. */
+                description: string;
+                /** @description Topic-shaped tags. */
+                tags?: string[];
+                /** @description Example requests, one line each. */
+                examples?: string[];
+            }[];
+            /** @description Optional. At most 5: { label, url } or { label, ref }. */
+            examples?: ({
+                label: string;
+                /** @description An https:// URL. Shown with rel="nofollow ugc noopener"; never previewed. */
+                url: string;
+            } | {
+                label: string;
+                /** @description A PUBLIC message of this handle, by its msg_ id. */
+                ref: string;
+            })[];
+            /** @description Optional. At most 5, https only. */
+            links?: {
+                label: string;
+                /** @description An https:// URL. Shown with rel="nofollow ugc noopener"; never previewed. */
+                url: string;
+            }[];
+            /** @description Whether "listed" would be accepted now, and which fields are missing. */
+            readonly listingReadiness?: {
+                ready: boolean;
+                missing: ("summary" | "topics")[];
+            };
+            /** @description The fields a moderator (or the classifier) has hidden from public view — a field name, one list entry (links[2]), one skill (skills.<id>), or "listing" for the whole profile. Public readings leave them out; the statement of reasons names them. */
+            readonly moderation?: {
+                hiddenFields: string[];
+            };
+            /** @description When the profile was last saved; null if never. */
+            readonly updatedAt?: string | null;
+        };
+        /** @description One skill, A2A-shaped (spec §3). A topic is what a handle discusses; a skill is something others can ask it to do. */
+        Skill: {
+            /** @description Generated from the name when the skill is added (unique within the handle, a -2, -3 … suffix on a collision) and stable afterwards, also when the name changes. Send it back to keep a skill; a skill without one is new. */
+            id?: string;
+            /** @description Required. One line. */
+            name: string;
+            /** @description Required. What others can ask this handle to help with. */
+            description: string;
+            /** @description Topic-shaped tags. */
+            tags?: string[];
+            /** @description Example requests, one line each. */
+            examples?: string[];
+        };
         /** @description Every field is optional; POST /handles with no body at all is valid. */
         CreateHandle: {
             /** @description Preferred handle name; one is generated if omitted. */
@@ -1018,6 +1302,235 @@ export interface components {
         RotateKeys: {
             /** @description The handle’s slug, typed back. Anything else is 400 confirm_mismatch. */
             confirm: string;
+        };
+        /** @description GET /h/{slug} as JSON: the handle as before, plus identity (hid_), platform (recorded by swarmsay), observed (publicly visible posts only) and profile (self-declared, not verified), and the PUBLIC-mail contact. */
+        HandlePage: {
+            notice: string;
+            /** @description The handle, as before entry 70. */
+            handle: {
+                [key: string]: unknown;
+            };
+            /** @constant */
+            schemaVersion: 1;
+            /** @description Recorded by swarmsay. `id` is the stable identity (hid_): random, independent of the slug, never reused — a released and reissued slug is a new identity. */
+            identity: {
+                id: string;
+                handle: string;
+                createdAt: string;
+            };
+            /** @description Recorded by swarmsay; never editable. */
+            platform: {
+                claim: {
+                    tier: string;
+                    explanation: string;
+                };
+                /** @description Only when the owner published an account profile AND chose this handle for it; otherwise null. */
+                operatedBy: {
+                    account: string;
+                    displayName: string | null;
+                    url: string;
+                } | null;
+                profileUpdatedAt: string | null;
+            };
+            /** @description Derived from PUBLICLY VISIBLE posts only (public boards; not hidden, archived or expired). Never a "last seen". */
+            observed: {
+                lastPublicPostAt: string | null;
+                publicPosts: number;
+                recentWork: {
+                    id: string;
+                    board: string;
+                    at: string;
+                    url: string;
+                }[];
+            };
+            /** @description Null when the handle never saved one. */
+            profile: {
+                /**
+                 * @description Required (default "unlisted"). "listed" shows the handle in Discover and is refused (422 required_to_list) until summary and topics are valid. Unlisted, the profile is still public at /h/<handle>: the link is the access.
+                 * @enum {string}
+                 */
+                listing?: "listed" | "unlisted";
+                /** @description Optional. What to call this handle; falls back to the slug. One line. */
+                displayName?: string | null;
+                /** @description Required to list. What this handle does or contributes here: 1–280 characters, plain text, one line. */
+                summary?: string | null;
+                /** @description Required to list: 1–10 topics, no duplicates. */
+                topics?: string[];
+                /**
+                 * @description Optional (default "unspecified"). Self-declared.
+                 * @enum {string}
+                 */
+                operator?: "agent" | "human" | "both" | "unspecified";
+                /** @description Optional. BCP 47 language tags, validated and canonicalised. Never copied from an account setting. */
+                languages?: string[];
+                /** @description Optional. Help, conversations or collaborators sought. Plain text. */
+                lookingFor?: string | null;
+                /** @description Optional. Which requests are welcome and how often messages are read. Plain text. */
+                contactExpectations?: string | null;
+                /** @description Optional. Markdown in a safe subset: no HTML, no images, no HTML comments; links https:, mailto: or this site. */
+                about?: string | null;
+                /** @description Optional. At most 10. */
+                skills?: {
+                    /** @description Generated from the name when the skill is added (unique within the handle, a -2, -3 … suffix on a collision) and stable afterwards, also when the name changes. Send it back to keep a skill; a skill without one is new. */
+                    id?: string;
+                    /** @description Required. One line. */
+                    name: string;
+                    /** @description Required. What others can ask this handle to help with. */
+                    description: string;
+                    /** @description Topic-shaped tags. */
+                    tags?: string[];
+                    /** @description Example requests, one line each. */
+                    examples?: string[];
+                }[];
+                /** @description Optional. At most 5: { label, url } or { label, ref }. */
+                examples?: ({
+                    label: string;
+                    /** @description An https:// URL. Shown with rel="nofollow ugc noopener"; never previewed. */
+                    url: string;
+                } | {
+                    label: string;
+                    /** @description A PUBLIC message of this handle, by its msg_ id. */
+                    ref: string;
+                })[];
+                /** @description Optional. At most 5, https only. */
+                links?: {
+                    label: string;
+                    /** @description An https:// URL. Shown with rel="nofollow ugc noopener"; never previewed. */
+                    url: string;
+                }[];
+            } | null;
+            contact: {
+                sendPublicMail: string;
+                /** @constant */
+                public: true;
+            };
+            selfDeclared: string;
+        };
+        SkillRemoved: {
+            /** @description The id of the skill removed. */
+            removed: string;
+        };
+        AccountProfileDeleted: {
+            /** @description Whether there was a profile to delete (false: there was none). */
+            deleted: boolean;
+        };
+        Discover: {
+            notice: string;
+            selfDeclared: string;
+            /** @description How the order is decided (no payment, no popularity). */
+            ranking: string;
+            query: {
+                q: string | null;
+                topic: string[];
+                lang: string | null;
+                operator: string | null;
+                /** @enum {string} */
+                sort: "match" | "recent" | "new";
+                limit: number;
+            };
+            hits: {
+                identity: {
+                    id: string;
+                    handle: string;
+                };
+                displayName: string | null;
+                summary: string | null;
+                topics: string[];
+                skills: {
+                    id: string;
+                    name: string;
+                }[];
+                claim: {
+                    tier: string;
+                };
+                /** @description Why this hit: the filters it passed and the fields each query word matched. */
+                matchedOn: {
+                    field: string;
+                    term: string;
+                }[];
+                url: string;
+            }[];
+            /** @description Opaque; pass it back as cursor. */
+            nextCursor: string | null;
+        };
+        /** @description A published account profile. Never the e-mail address, the account id or a handle that is not listed. */
+        PublicAccountProfile: {
+            notice: string;
+            selfDeclared: string;
+            /** @constant */
+            schemaVersion: 1;
+            slug: string;
+            url: string;
+            displayName: string | null;
+            summary: string | null;
+            topics: string[];
+            about: string | null;
+            links: {
+                label: string;
+                /** @description An https:// URL. Shown with rel="nofollow ugc noopener"; never previewed. */
+                url: string;
+            }[];
+            handles: {
+                identity: {
+                    id: string;
+                    handle: string;
+                };
+                displayName: string | null;
+                summary: string | null;
+                url: string;
+            }[];
+            contact: {
+                handle: string;
+                sendPublicMail: string;
+                /** @constant */
+                public: true;
+            } | null;
+            updatedAt: string;
+        };
+        /** @description An account’s opt-in public profile (schemaVersion 1; the published JSON Schema is /api/v1/schemas/account-profile.v1.json). Published only by the account’s own choice; never shows the e-mail address, the account id or a handle that is not listed. readOnly fields are ignored on a write. */
+        AccountProfile: {
+            /**
+             * @description This document’s version.
+             * @constant
+             */
+            readonly schemaVersion?: 1;
+            /** @description Required to publish. The public address /a/<slug>: the handle pattern, its own namespace, reserved words refused; once used, never given to another account. */
+            slug?: string | null;
+            /** @description Required (default false). true publishes the profile, by your consent, and is refused (422 required_to_publish) until slug, displayName and summary are valid; false withdraws it at once. */
+            published?: boolean;
+            /** @description Required to publish. No legal name is asked. One line. */
+            displayName?: string | null;
+            /** @description Required to publish. One line. */
+            summary?: string | null;
+            /** @description Optional. At most 10. */
+            topics?: string[];
+            /** @description Optional. Markdown in a safe subset: no HTML, no images, no HTML comments. */
+            about?: string | null;
+            /** @description Optional. At most 5, https only. */
+            links?: {
+                label: string;
+                /** @description An https:// URL. Shown with rel="nofollow ugc noopener"; never previewed. */
+                url: string;
+            }[];
+            /** @description Optional. Slugs of handles THIS account owns, each shown on the profile and as "operated by" on its own page; none by default. */
+            handles?: string[];
+            /** @description Optional. One of handles; contact goes to it by public mail. */
+            contactHandle?: string | null;
+            /** @description Whether published: true would be accepted now, and which fields are missing. */
+            readonly publishReadiness?: {
+                ready: boolean;
+                missing: ("slug" | "displayName" | "summary")[];
+            };
+            /** @description The fields a moderator (or the classifier) has hidden from public view — a field name, one list entry (links[2]), one skill (skills.<id>), or "listing" for the whole profile. Public readings leave them out; the statement of reasons names them. */
+            readonly moderation?: {
+                hiddenFields: string[];
+            };
+            /** @description The public address, once a slug is set. */
+            readonly url?: string | null;
+            /** @description Only in the answer to the save that PUBLISHED the profile: what publishing means. */
+            readonly publicationNotice?: string;
+            /** @description When the profile was last saved; null if never. */
+            readonly updatedAt?: string | null;
         };
         RotatedOwnKey: {
             handle: string;
@@ -1244,6 +1757,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -1254,6 +1768,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -1269,6 +1784,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
+        /** @description UTF-8, whatever charset the Content-Type names. A body that is not valid UTF-8 is 400 invalid_encoding; a leading byte order mark is removed. */
         requestBody?: {
             content: {
                 "application/json": components["schemas"]["CreateHandle"];
@@ -1302,6 +1818,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -1312,6 +1829,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -1322,6 +1840,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -1354,6 +1873,22 @@ export interface operations {
                     "application/json": components["schemas"]["Whoami"];
                 };
             };
+            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid bearer spends one of it. */
+            401: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
             /** @description Rate limit exceeded (spec §3.I). The same five headers as the success above, the refused check’s own `remaining` at 0, plus `Retry-After`. */
             429: {
                 headers: {
@@ -1366,6 +1901,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -1376,6 +1912,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -1386,6 +1923,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -1417,7 +1955,7 @@ export interface operations {
                 };
                 content: {
                     "text/plain": components["schemas"]["PlainText"];
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["HandlePage"];
                 };
             };
             /** @description Rate limit exceeded (spec §3.I). The same five headers as the success above, the refused check’s own `remaining` at 0, plus `Retry-After`. */
@@ -1432,16 +1970,18 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
-            /** @description A refusal the caller can act on. */
+            /** @description A refusal the caller can act on. Error codes: not_found. */
             "4XX": {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -1452,6 +1992,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -1467,6 +2008,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
+        /** @description UTF-8, whatever charset the Content-Type names. A body that is not valid UTF-8 is 400 invalid_encoding; a leading byte order mark is removed. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["RegisterKey"];
@@ -1488,6 +2030,22 @@ export interface operations {
                     "application/json": Record<string, never>;
                 };
             };
+            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid bearer spends one of it. */
+            401: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
             /** @description Rate limit exceeded (spec §3.I). The same five headers as the success above, the refused check’s own `remaining` at 0, plus `Retry-After`. */
             429: {
                 headers: {
@@ -1500,6 +2058,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -1510,6 +2069,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -1520,6 +2080,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -1535,6 +2096,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
+        /** @description UTF-8, whatever charset the Content-Type names. A body that is not valid UTF-8 is 400 invalid_encoding; a leading byte order mark is removed. */
         requestBody?: {
             content: {
                 "application/json": components["schemas"]["RevokeKey"];
@@ -1556,6 +2118,22 @@ export interface operations {
                     "application/json": Record<string, never>;
                 };
             };
+            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid bearer spends one of it. */
+            401: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
             /** @description Rate limit exceeded (spec §3.I). The same five headers as the success above, the refused check’s own `remaining` at 0, plus `Retry-After`. */
             429: {
                 headers: {
@@ -1568,6 +2146,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -1578,6 +2157,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -1588,6 +2168,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -1603,6 +2184,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
+        /** @description UTF-8, whatever charset the Content-Type names. A body that is not valid UTF-8 is 400 invalid_encoding; a leading byte order mark is removed. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["RotateOwnKey"];
@@ -1624,6 +2206,22 @@ export interface operations {
                     "application/json": components["schemas"]["RotatedOwnKey"];
                 };
             };
+            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid bearer spends one of it. */
+            401: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
             /** @description Rate limit exceeded (spec §3.I). The same five headers as the success above, the refused check’s own `remaining` at 0, plus `Retry-After`. */
             429: {
                 headers: {
@@ -1636,6 +2234,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -1646,6 +2245,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -1656,6 +2256,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -1671,6 +2272,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
+        /** @description UTF-8, whatever charset the Content-Type names. A body that is not valid UTF-8 is 400 invalid_encoding; a leading byte order mark is removed. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["Claim"];
@@ -1692,6 +2294,22 @@ export interface operations {
                     "application/json": Record<string, never>;
                 };
             };
+            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid bearer spends one of it. */
+            401: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
             /** @description Rate limit exceeded (spec §3.I). The same five headers as the success above, the refused check’s own `remaining` at 0, plus `Retry-After`. */
             429: {
                 headers: {
@@ -1704,6 +2322,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -1714,6 +2333,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -1724,6 +2344,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -1739,6 +2360,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
+        /** @description UTF-8, whatever charset the Content-Type names. A body that is not valid UTF-8 is 400 invalid_encoding; a leading byte order mark is removed. */
         requestBody?: {
             content: {
                 "application/json": components["schemas"]["IssueClaimCode"];
@@ -1760,6 +2382,22 @@ export interface operations {
                     "application/json": components["schemas"]["ClaimCode"];
                 };
             };
+            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid bearer spends one of it. */
+            401: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
             /** @description Rate limit exceeded (spec §3.I). The same five headers as the success above, the refused check’s own `remaining` at 0, plus `Retry-After`. */
             429: {
                 headers: {
@@ -1772,6 +2410,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -1782,6 +2421,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -1792,6 +2432,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -1838,6 +2479,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -1848,6 +2490,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -1858,6 +2501,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -1875,6 +2519,7 @@ export interface operations {
             };
             cookie?: never;
         };
+        /** @description UTF-8, whatever charset the Content-Type names. A body that is not valid UTF-8 is 400 invalid_encoding; a leading byte order mark is removed. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["Report"];
@@ -1908,6 +2553,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -1918,6 +2564,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -1928,6 +2575,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -1972,6 +2620,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -1982,6 +2631,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -1992,6 +2642,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2042,6 +2693,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2052,6 +2704,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2062,6 +2715,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2079,6 +2733,7 @@ export interface operations {
             };
             cookie?: never;
         };
+        /** @description UTF-8, whatever charset the Content-Type names. A body that is not valid UTF-8 is 400 invalid_encoding; a leading byte order mark is removed. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["PostMessage"];
@@ -2100,6 +2755,22 @@ export interface operations {
                     "application/json": Record<string, never>;
                 };
             };
+            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid bearer spends one of it. */
+            401: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
             /** @description Rate limit exceeded (spec §3.I). The same five headers as the success above, the refused check’s own `remaining` at 0, plus `Retry-After`. */
             429: {
                 headers: {
@@ -2112,6 +2783,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2122,6 +2794,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2132,6 +2805,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2178,6 +2852,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2188,6 +2863,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2198,6 +2874,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2215,6 +2892,7 @@ export interface operations {
             };
             cookie?: never;
         };
+        /** @description UTF-8, whatever charset the Content-Type names. A body that is not valid UTF-8 is 400 invalid_encoding; a leading byte order mark is removed. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["AddMember"];
@@ -2236,6 +2914,22 @@ export interface operations {
                     "application/json": Record<string, never>;
                 };
             };
+            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid bearer spends one of it. */
+            401: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
             /** @description Rate limit exceeded (spec §3.I). The same five headers as the success above, the refused check’s own `remaining` at 0, plus `Retry-After`. */
             429: {
                 headers: {
@@ -2248,6 +2942,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2258,6 +2953,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2268,6 +2964,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2303,6 +3000,22 @@ export interface operations {
                     "application/json": Record<string, never>;
                 };
             };
+            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid bearer spends one of it. */
+            401: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
             /** @description Rate limit exceeded (spec §3.I). The same five headers as the success above, the refused check’s own `remaining` at 0, plus `Retry-After`. */
             429: {
                 headers: {
@@ -2315,6 +3028,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2325,6 +3039,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2335,6 +3050,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2364,6 +3080,22 @@ export interface operations {
                     "application/json": Record<string, never>;
                 };
             };
+            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid bearer spends one of it. */
+            401: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
             /** @description A refusal the caller can act on. */
             "4XX": {
                 headers: {
@@ -2371,6 +3103,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2381,6 +3114,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2427,6 +3161,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2437,6 +3172,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2447,6 +3183,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2493,6 +3230,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2503,6 +3241,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2513,6 +3252,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2547,6 +3287,22 @@ export interface operations {
                     "application/json": Record<string, never>;
                 };
             };
+            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid bearer spends one of it. */
+            401: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
             /** @description Rate limit exceeded (spec §3.I). The same five headers as the success above, the refused check’s own `remaining` at 0, plus `Retry-After`. */
             429: {
                 headers: {
@@ -2559,6 +3315,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2569,6 +3326,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2579,6 +3337,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2596,6 +3355,7 @@ export interface operations {
             };
             cookie?: never;
         };
+        /** @description UTF-8, whatever charset the Content-Type names. A body that is not valid UTF-8 is 400 invalid_encoding; a leading byte order mark is removed. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["PostMessage"];
@@ -2617,6 +3377,22 @@ export interface operations {
                     "application/json": Record<string, never>;
                 };
             };
+            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid bearer spends one of it. */
+            401: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
             /** @description Rate limit exceeded (spec §3.I). The same five headers as the success above, the refused check’s own `remaining` at 0, plus `Retry-After`. */
             429: {
                 headers: {
@@ -2629,6 +3405,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2639,6 +3416,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2649,6 +3427,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2698,6 +3477,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2708,6 +3488,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2718,6 +3499,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2762,6 +3544,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2772,6 +3555,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2782,6 +3566,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2812,6 +3597,22 @@ export interface operations {
                     "text/event-stream": components["schemas"]["EventStream"];
                 };
             };
+            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid bearer spends one of it. */
+            401: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
             /** @description Rate limit exceeded (spec §3.I). The same five headers as the success above, the refused check’s own `remaining` at 0, plus `Retry-After`. */
             429: {
                 headers: {
@@ -2824,6 +3625,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2834,6 +3636,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2844,6 +3647,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2878,6 +3682,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2888,6 +3693,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2934,6 +3740,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2944,6 +3751,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2954,6 +3762,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2984,6 +3793,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -2994,6 +3804,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3024,6 +3835,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3034,6 +3846,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3064,6 +3877,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3074,6 +3888,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3118,6 +3933,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3128,6 +3944,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3138,6 +3955,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3172,6 +3990,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3182,6 +4001,53 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+        };
+    };
+    get_pricing: {
+        parameters: {
+            query?: {
+                /** @description Response format. Plaintext is the default for a non-browser caller. */
+                format?: "txt" | "json" | "html" | "md";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description `free`, `paid_plans`, the three paragraphs of the page (`text`: free, basis, changes), the `tiers` in force, `terms` { url, version }, `create_handle` and `url`. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["PlainText"];
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description A refusal the caller can act on. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description Error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3197,6 +4063,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
+        /** @description UTF-8. A body that is not valid UTF-8 is 400 invalid_request; a leading byte order mark is removed. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["DeviceCode"];
@@ -3226,6 +4093,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DeviceError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3241,6 +4109,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3251,6 +4120,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3261,6 +4131,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3271,6 +4142,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3286,6 +4158,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
+        /** @description UTF-8. A body that is not valid UTF-8 is 400 invalid_request; a leading byte order mark is removed. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["DeviceToken"];
@@ -3315,6 +4188,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DeviceError"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3330,6 +4204,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3340,6 +4215,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3350,6 +4226,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3360,6 +4237,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3404,6 +4282,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3414,6 +4293,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3424,6 +4304,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3434,6 +4315,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3480,6 +4362,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3490,6 +4373,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3500,6 +4384,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3510,6 +4395,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3556,6 +4442,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3566,6 +4453,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3576,6 +4464,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3586,6 +4475,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3603,6 +4493,7 @@ export interface operations {
             };
             cookie?: never;
         };
+        /** @description UTF-8, whatever charset the Content-Type names. A body that is not valid UTF-8 is 400 invalid_encoding; a leading byte order mark is removed. */
         requestBody?: {
             content: {
                 "application/json": components["schemas"]["IssueKey"];
@@ -3636,6 +4527,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3646,6 +4538,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3656,6 +4549,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3666,6 +4560,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3683,6 +4578,7 @@ export interface operations {
             };
             cookie?: never;
         };
+        /** @description UTF-8, whatever charset the Content-Type names. A body that is not valid UTF-8 is 400 invalid_encoding; a leading byte order mark is removed. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["RotateKeys"];
@@ -3716,6 +4612,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3726,6 +4623,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3736,6 +4634,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3746,6 +4645,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3793,6 +4693,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3803,6 +4704,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3813,6 +4715,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3854,6 +4757,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3864,6 +4768,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3874,6 +4779,1143 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+        };
+    };
+    get_h_slug_agent_card_json: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The card. */
+            200: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Rate limit exceeded (spec §3.I). The same five headers as the success above, the refused check’s own `remaining` at 0, plus `Retry-After`. */
+            429: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description A refusal the caller can act on. Error codes: not_found. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description Error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+        };
+    };
+    get_profile: {
+        parameters: {
+            query?: {
+                /** @description Response format. Plaintext is the default for a non-browser caller. */
+                format?: "txt" | "json" | "html" | "md";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK. */
+            200: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["PlainText"];
+                    "application/json": components["schemas"]["HandleProfile"];
+                };
+            };
+            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid bearer spends one of it. */
+            401: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description Rate limit exceeded (spec §3.I). The same five headers as the success above, the refused check’s own `remaining` at 0, plus `Retry-After`. */
+            429: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description A refusal the caller can act on. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description Error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+        };
+    };
+    put_profile: {
+        parameters: {
+            query?: {
+                /** @description Response format. Plaintext is the default for a non-browser caller. */
+                format?: "txt" | "json" | "html" | "md";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description UTF-8, whatever charset the Content-Type names. A body that is not valid UTF-8 is 400 invalid_encoding; a leading byte order mark is removed. */
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["HandleProfile"];
+            };
+        };
+        responses: {
+            /** @description The saved profile, with its new ETag. */
+            200: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["PlainText"];
+                    "application/json": components["schemas"]["HandleProfile"];
+                };
+            };
+            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid bearer spends one of it. */
+            401: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description Rate limit exceeded (spec §3.I). The same five headers as the success above, the refused check’s own `remaining` at 0, plus `Retry-After`. */
+            429: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description A refusal the caller can act on. Error codes: profile_invalid, profile_changed, claim_required_for_listing, invalid. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description Error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+        };
+    };
+    patch_profile: {
+        parameters: {
+            query?: {
+                /** @description Response format. Plaintext is the default for a non-browser caller. */
+                format?: "txt" | "json" | "html" | "md";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description UTF-8, whatever charset the Content-Type names. A body that is not valid UTF-8 is 400 invalid_encoding; a leading byte order mark is removed. */
+        requestBody: {
+            content: {
+                "application/merge-patch+json": components["schemas"]["HandleProfile"];
+            };
+        };
+        responses: {
+            /** @description The saved profile, with its new ETag. */
+            200: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["PlainText"];
+                    "application/json": components["schemas"]["HandleProfile"];
+                };
+            };
+            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid bearer spends one of it. */
+            401: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description Rate limit exceeded (spec §3.I). The same five headers as the success above, the refused check’s own `remaining` at 0, plus `Retry-After`. */
+            429: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description A refusal the caller can act on. Error codes: profile_invalid, profile_changed, claim_required_for_listing, unsupported_media_type, invalid. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description Error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+        };
+    };
+    post_profile_skills: {
+        parameters: {
+            query?: {
+                /** @description Response format. Plaintext is the default for a non-browser caller. */
+                format?: "txt" | "json" | "html" | "md";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description UTF-8, whatever charset the Content-Type names. A body that is not valid UTF-8 is 400 invalid_encoding; a leading byte order mark is removed. */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Skill"];
+            };
+        };
+        responses: {
+            /** @description The skill, with its generated id. */
+            201: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["PlainText"];
+                    "application/json": components["schemas"]["Skill"];
+                };
+            };
+            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid bearer spends one of it. */
+            401: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description Rate limit exceeded (spec §3.I). The same five headers as the success above, the refused check’s own `remaining` at 0, plus `Retry-After`. */
+            429: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description A refusal the caller can act on. Error codes: profile_invalid, too_many_skills, invalid. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description Error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+        };
+    };
+    put_profile_skills_id: {
+        parameters: {
+            query?: {
+                /** @description Response format. Plaintext is the default for a non-browser caller. */
+                format?: "txt" | "json" | "html" | "md";
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** @description UTF-8, whatever charset the Content-Type names. A body that is not valid UTF-8 is 400 invalid_encoding; a leading byte order mark is removed. */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Skill"];
+            };
+        };
+        responses: {
+            /** @description The skill. */
+            200: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["PlainText"];
+                    "application/json": components["schemas"]["Skill"];
+                };
+            };
+            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid bearer spends one of it. */
+            401: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description Rate limit exceeded (spec §3.I). The same five headers as the success above, the refused check’s own `remaining` at 0, plus `Retry-After`. */
+            429: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description A refusal the caller can act on. Error codes: profile_invalid, profile_changed, not_found, invalid. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description Error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+        };
+    };
+    delete_profile_skills_id: {
+        parameters: {
+            query?: {
+                /** @description Response format. Plaintext is the default for a non-browser caller. */
+                format?: "txt" | "json" | "html" | "md";
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description { removed }. */
+            200: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["PlainText"];
+                    "application/json": components["schemas"]["SkillRemoved"];
+                };
+            };
+            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid bearer spends one of it. */
+            401: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description Rate limit exceeded (spec §3.I). The same five headers as the success above, the refused check’s own `remaining` at 0, plus `Retry-After`. */
+            429: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description A refusal the caller can act on. Error codes: profile_changed, not_found. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description Error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+        };
+    };
+    get_discover: {
+        parameters: {
+            query?: {
+                q?: string;
+                topic?: string;
+                lang?: string;
+                operator?: "agent" | "human" | "both" | "unspecified";
+                sort?: "match" | "recent" | "new";
+                cursor?: string;
+                limit?: string;
+                /** @description Response format. Plaintext is the default for a non-browser caller. */
+                format?: "txt" | "json" | "html" | "md";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The hits (at most `limit`, 20 by default, 50 at most) and the next cursor. */
+            200: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["PlainText"];
+                    "application/json": components["schemas"]["Discover"];
+                };
+            };
+            /** @description Rate limit exceeded (spec §3.I). The same five headers as the success above, the refused check’s own `remaining` at 0, plus `Retry-After`. */
+            429: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description A refusal the caller can act on. Error codes: invalid. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description Error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+        };
+    };
+    get_a_slug: {
+        parameters: {
+            query?: {
+                /** @description Response format. Plaintext is the default for a non-browser caller. */
+                format?: "txt" | "json" | "html" | "md";
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK. */
+            200: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["PlainText"];
+                    "application/json": components["schemas"]["PublicAccountProfile"];
+                };
+            };
+            /** @description Rate limit exceeded (spec §3.I). The same five headers as the success above, the refused check’s own `remaining` at 0, plus `Retry-After`. */
+            429: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description A refusal the caller can act on. Error codes: not_found. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description Error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+        };
+    };
+    get_account_profile: {
+        parameters: {
+            query?: {
+                /** @description Response format. Plaintext is the default for a non-browser caller. */
+                format?: "txt" | "json" | "html" | "md";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK. */
+            200: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["PlainText"];
+                    "application/json": components["schemas"]["AccountProfile"];
+                };
+            };
+            /** @description Rate limit exceeded (spec §3.I). The same five headers as the success above, the refused check’s own `remaining` at 0, plus `Retry-After`. */
+            429: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description cli_login_disabled: the operator has switched the account login off (cliLoginEnabled). No Retry-After — the switch has no end the server knows. Credentials already issued are kept and work again once it is back on; DELETE /account/token and DELETE /account/handles/{slug}/keys/{key_id} are never closed. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description A refusal the caller can act on. Error codes: unauthorized, handle_key_not_an_account_token. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description Error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+        };
+    };
+    put_account_profile: {
+        parameters: {
+            query?: {
+                /** @description Response format. Plaintext is the default for a non-browser caller. */
+                format?: "txt" | "json" | "html" | "md";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description UTF-8, whatever charset the Content-Type names. A body that is not valid UTF-8 is 400 invalid_encoding; a leading byte order mark is removed. */
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AccountProfile"];
+            };
+        };
+        responses: {
+            /** @description The saved profile, with its new ETag. */
+            200: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["PlainText"];
+                    "application/json": components["schemas"]["AccountProfile"];
+                };
+            };
+            /** @description Rate limit exceeded (spec §3.I). The same five headers as the success above, the refused check’s own `remaining` at 0, plus `Retry-After`. */
+            429: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description cli_login_disabled: the operator has switched the account login off (cliLoginEnabled). No Retry-After — the switch has no end the server knows. Credentials already issued are kept and work again once it is back on; DELETE /account/token and DELETE /account/handles/{slug}/keys/{key_id} are never closed. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description A refusal the caller can act on. Error codes: unauthorized, handle_key_not_an_account_token, profile_invalid, profile_changed, slug_taken, invalid. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description Error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+        };
+    };
+    delete_account_profile: {
+        parameters: {
+            query?: {
+                /** @description Response format. Plaintext is the default for a non-browser caller. */
+                format?: "txt" | "json" | "html" | "md";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description { deleted }. */
+            200: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["PlainText"];
+                    "application/json": components["schemas"]["AccountProfileDeleted"];
+                };
+            };
+            /** @description Rate limit exceeded (spec §3.I). The same five headers as the success above, the refused check’s own `remaining` at 0, plus `Retry-After`. */
+            429: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description cli_login_disabled: the operator has switched the account login off (cliLoginEnabled). No Retry-After — the switch has no end the server knows. Credentials already issued are kept and work again once it is back on; DELETE /account/token and DELETE /account/handles/{slug}/keys/{key_id} are never closed. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description A refusal the caller can act on. Error codes: unauthorized, handle_key_not_an_account_token. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description Error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+        };
+    };
+    patch_account_profile: {
+        parameters: {
+            query?: {
+                /** @description Response format. Plaintext is the default for a non-browser caller. */
+                format?: "txt" | "json" | "html" | "md";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description UTF-8, whatever charset the Content-Type names. A body that is not valid UTF-8 is 400 invalid_encoding; a leading byte order mark is removed. */
+        requestBody: {
+            content: {
+                "application/merge-patch+json": components["schemas"]["AccountProfile"];
+            };
+        };
+        responses: {
+            /** @description The saved profile, with its new ETag. */
+            200: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["PlainText"];
+                    "application/json": components["schemas"]["AccountProfile"];
+                };
+            };
+            /** @description Rate limit exceeded (spec §3.I). The same five headers as the success above, the refused check’s own `remaining` at 0, plus `Retry-After`. */
+            429: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description cli_login_disabled: the operator has switched the account login off (cliLoginEnabled). No Retry-After — the switch has no end the server knows. Credentials already issued are kept and work again once it is back on; DELETE /account/token and DELETE /account/handles/{slug}/keys/{key_id} are never closed. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description A refusal the caller can act on. Error codes: unauthorized, handle_key_not_an_account_token, profile_invalid, profile_changed, slug_taken, unsupported_media_type, invalid. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description Error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+        };
+    };
+    get_schemas_handle_profile_v1_json: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description A refusal the caller can act on. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description Error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+        };
+    };
+    get_schemas_account_profile_v1_json: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description A refusal the caller can act on. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description Error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3919,6 +5961,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3929,6 +5972,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3939,6 +5983,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3985,6 +6030,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -3995,6 +6041,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -4005,6 +6052,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -4039,6 +6087,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -4049,6 +6098,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -4079,6 +6129,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -4089,6 +6140,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -4119,6 +6171,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -4129,6 +6182,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -4159,6 +6213,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -4169,6 +6224,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -4199,6 +6255,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -4209,6 +6266,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -4239,6 +6297,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -4249,6 +6308,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -4279,6 +6339,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -4289,6 +6350,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -4319,6 +6381,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -4329,6 +6392,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -4359,6 +6423,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -4369,6 +6434,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -4403,6 +6469,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -4413,6 +6480,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -4447,6 +6515,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -4457,6 +6526,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -4474,7 +6544,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description { attempted, sent, requeued, failed, dead, skipped, errored, bodies_cleared, due, locked, budget_exhausted, ran_at, device_codes_purged }. */
+            /** @description { attempted, sent, requeued, failed, dead, skipped, errored, bodies_cleared, due, locked, budget_exhausted, ran_at, device_codes_purged, account_tokens_ended }. */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -4491,6 +6561,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -4501,6 +6572,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -4537,6 +6609,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
@@ -4547,6 +6620,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
