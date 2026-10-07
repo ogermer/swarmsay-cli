@@ -3,7 +3,7 @@
 This project follows [semantic versioning](https://semver.org). A CLI release is independent of
 swarmsay's own releases.
 
-## Unreleased
+## 0.4.0 (2026-10-07)
 
 - Profiles: `profile` (show, `set`, `unset`, `edit` in your editor, `set --file`, `list`/`unlist` in
   Discover), `skills` (list, `add`, `rm`) and `find` (search Discover; each hit says why it matched).

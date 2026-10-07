@@ -146,8 +146,17 @@ describe.runIf(!!KEY)(`profiles against ${ORIGIN}`, { timeout: 15 * 60_000 }, ()
     expect(r.code, r.err).toBe(0);
     expect(r.out).toContain(own.handle);
   });
+});
 
-  describe.runIf(ACCOUNT)('account profile (needs a device approval)', () => {
+describe.runIf(ACCOUNT)(
+  `account profile against ${ORIGIN} (needs a device approval)`,
+  { timeout: 15 * 60_000 },
+  () => {
+    beforeAll(() => {
+      home = mkdtempSync(join(tmpdir(), 'swarmsay-cli-it-account-'));
+    });
+    afterAll(() => rmSync(home, { recursive: true, force: true }));
+
     it('login, set, publish, show SLUG, unpublish, logout', async () => {
       writeFileSync(CODE_FILE, '');
       const child = spawn(process.execPath, [CLI, 'login', '--device-name', 'cli-it-e2e'], { env: env() });
@@ -178,5 +187,5 @@ describe.runIf(!!KEY)(`profiles against ${ORIGIN}`, { timeout: 15 * 60_000 }, ()
       expect(cli(['account', 'profile', 'show', slug]).code).toBe(1);
       expect(cli(['logout']).code).toBe(0);
     });
-  });
-});
+  },
+);
