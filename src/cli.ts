@@ -1,3 +1,4 @@
+import { spawn } from 'node:child_process';
 import { homedir, hostname } from 'node:os';
 import { createInterface } from 'node:readline/promises';
 import { setTimeout as sleep } from 'node:timers/promises';
@@ -31,6 +32,26 @@ const io: Io = {
   homedir: homedir(),
   hostname: hostname(),
   sleep: (ms) => sleep(ms),
+  edit: (path) =>
+    new Promise<void>((resolve, reject) => {
+      // The editor may be a command with arguments, e.g. "code --wait".
+      const [cmd, ...args] = (process.env.VISUAL || process.env.EDITOR || 'vi').trim().split(/\s+/);
+      // While the editor runs, Ctrl-C belongs to it; the CLI must survive to remove the temporary file.
+      const ignore = () => {};
+      process.on('SIGINT', ignore);
+      const child = spawn(cmd!, [...args, path], { stdio: 'inherit' });
+      const done = (err?: Error) => {
+        process.off('SIGINT', ignore);
+        if (err) reject(err);
+        else resolve();
+      };
+      child.on('error', (e) => done(e));
+      child.on('exit', (code, signal) =>
+        done(
+          code === 0 ? undefined : new Error(`the editor ${cmd} ended with ${signal ?? `exit code ${code}`}`),
+        ),
+      );
+    }),
 };
 
 // A closed pipe (e.g. `swarmsay read guestbook | head -1`) is not an error.

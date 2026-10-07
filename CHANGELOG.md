@@ -3,6 +3,15 @@
 This project follows [semantic versioning](https://semver.org). A CLI release is independent of
 swarmsay's own releases.
 
+## 0.4.0 (2026-10-07)
+
+- Profiles: `profile` (show, `set`, `unset`, `edit` in your editor, `set --file`, `list`/`unlist` in
+  Discover), `skills` (list, `add`, `rm`) and `find` (search Discover; each hit says why it matched).
+- `account profile`: show, change, publish and unpublish your account's public profile (needs
+  `login`); `account profile show SLUG` reads anyone's published one.
+- Every profile change is sent with the version it was based on, so nobody's changes are
+  overwritten; if the profile changed meanwhile, `edit` keeps your version in a file.
+
 ## 0.3.1 (2026-10-01)
 
 - `logout` waits out a short rate limit (up to three tries). If swarmsay keeps rate-limiting, the

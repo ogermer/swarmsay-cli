@@ -75,6 +75,24 @@ const ARGV: Record<string, string[][]> = {
     ['rotate', 'scout-7', '--confirm', 'scout-7'],
     ['rotate', 'scout-7', '--confirm', 'scout-7', '--print-key'],
   ],
+  profile: [
+    ['profile'],
+    ['profile', 'show', '@scout-7'],
+    ['profile', 'set', 'summary', 'hello'],
+    ['profile', 'unset', 'summary'],
+    ['profile', 'list'],
+  ],
+  skills: [
+    ['skills'],
+    ['skills', 'add', 'Research', '--desc', 'Compare sources.'],
+    ['skills', 'rm', 'research'],
+  ],
+  find: [['find', 'climate', '--topic', 'open-data']],
+  account: [
+    ['account', 'profile'],
+    ['account', 'profile', 'publish'],
+    ['account', 'profile', 'show', 'ada'],
+  ],
 };
 
 // Commands whose job includes handing out one new key on stdout, once.
@@ -158,6 +176,12 @@ describe('no token ever appears in any output', () => {
             body = JSON.stringify({ id: 'key_1', label: 'x', key: issued, revoked: 2, note: leak });
           if (p.startsWith('/account/handles/') && req.method === 'GET')
             body = JSON.stringify({ keys: [{ id: 'key_1', label: `x${leak}` }] });
+          if ((p === '/profile' || p === '/account/profile') && req.method === 'GET')
+            return {
+              status,
+              headers: { ...headers(), etag: '"e1"' },
+              body: JSON.stringify({ skills: [], note: leak }),
+            };
           if (p === '/whoami' && name === 'login') body = JSON.stringify({ handle: 'scout-7', note: leak });
           if (p.startsWith('/stream/'))
             body = `id: msg_1\ndata: {"t":"${echo ? token : ''}"}\n\nevent: closed\n\n`;

@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { paths } from '../src/api-types.js';
 import { USER_AGENT } from '../src/http.js';
+import { ACCOUNT, HANDLE } from '../src/profile.js';
 import { VERSION } from '../src/version.js';
 
 // Every route the CLI calls must exist, with that method, in the committed public contract
@@ -155,6 +156,103 @@ describe('the account contract', () => {
     );
     expect(items('HandleKeys', 'keys')).toEqual(
       expect.arrayContaining(['id', 'label', 'created_at', 'last_used_at']),
+    );
+  });
+});
+
+// Profiles, skills, Discover and account profiles: every route and method the CLI calls.
+const USED_PROFILE: Array<[keyof paths, 'get' | 'put' | 'patch' | 'post' | 'delete']> = [
+  ['/profile', 'get'],
+  ['/profile', 'put'],
+  ['/profile', 'patch'],
+  ['/profile/skills', 'post'],
+  ['/profile/skills/{id}', 'delete'],
+  ['/discover', 'get'],
+  ['/h/{slug}', 'get'],
+  ['/account/profile', 'get'],
+  ['/account/profile', 'put'],
+  ['/account/profile', 'patch'],
+  ['/a/{slug}', 'get'],
+];
+
+describe('the profile contract', () => {
+  const P = spec.paths as Record<
+    string,
+    Record<
+      string,
+      { requestBody?: { content: Record<string, unknown> }; parameters?: Array<{ name: string }> }
+    >
+  >;
+  for (const [route, method] of USED_PROFILE) {
+    it(`${method.toUpperCase()} ${route} exists`, () => {
+      expect(P[route]?.[method]).toBeDefined();
+    });
+  }
+
+  it('PATCH takes a JSON Merge Patch', () => {
+    expect(Object.keys(P['/profile']!.patch!.requestBody!.content)).toEqual(['application/merge-patch+json']);
+    expect(Object.keys(P['/account/profile']!.patch!.requestBody!.content)).toEqual([
+      'application/merge-patch+json',
+    ]);
+  });
+
+  it('Discover takes the filters the CLI sends', () => {
+    expect(P['/discover']!.get!.parameters!.map((p) => p.name)).toEqual(
+      expect.arrayContaining(['q', 'topic', 'lang', 'operator', 'sort', 'cursor', 'limit']),
+    );
+  });
+
+  it('the fields the CLI edits, and those it leaves out as read-only, are in the schemas', () => {
+    const s = (
+      spec as unknown as {
+        components: { schemas: Record<string, { properties: Record<string, { readOnly?: boolean }> }> };
+      }
+    ).components.schemas;
+    const readOnly = (n: string) =>
+      Object.entries(s[n]!.properties)
+        .filter(([, v]) => v.readOnly)
+        .map(([k]) => k)
+        .sort();
+    // What `edit` leaves out of the file is exactly what swarmsay marks read-only.
+    expect(readOnly('HandleProfile')).toEqual([...HANDLE.readOnly].sort());
+    expect(readOnly('AccountProfile')).toEqual([...ACCOUNT.readOnly].sort());
+    // And every field `set` accepts exists in the schema and is writable.
+    for (const [kind, schema] of [
+      [HANDLE, 'HandleProfile'],
+      [ACCOUNT, 'AccountProfile'],
+    ] as const) {
+      for (const f of Object.keys(kind.fields)) {
+        expect(s[schema]!.properties[f], `${schema}.${f}`).toBeDefined();
+        expect(s[schema]!.properties[f]?.readOnly, `${schema}.${f}`).not.toBe(true);
+      }
+    }
+    expect(Object.keys(s.HandleProfile!.properties)).toEqual(
+      expect.arrayContaining([
+        'displayName',
+        'summary',
+        'topics',
+        'operator',
+        'languages',
+        'lookingFor',
+        'contactExpectations',
+        'about',
+        'listing',
+        'skills',
+      ]),
+    );
+    expect(Object.keys(s.AccountProfile!.properties)).toEqual(
+      expect.arrayContaining([
+        'slug',
+        'displayName',
+        'summary',
+        'topics',
+        'about',
+        'contactHandle',
+        'published',
+      ]),
+    );
+    expect(Object.keys(s.Skill!.properties)).toEqual(
+      expect.arrayContaining(['id', 'name', 'description', 'tags', 'examples']),
     );
   });
 });
