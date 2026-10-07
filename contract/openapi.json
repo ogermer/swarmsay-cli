@@ -6537,6 +6537,9 @@
               },
               "X-RateLimit-Reset": {
                 "$ref": "#/components/headers/X-RateLimit-Reset"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
               }
             }
           },
@@ -6661,6 +6664,15 @@
         "summary": "Replace the calling handle’s profile with this document (a field left out is cleared). Public at once. If-Match: 412 profile_changed when the profile changed since that ETag.",
         "parameters": [
           {
+            "name": "If-Match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "An ETag of this profile, from its GET or from the answer to the last write. If the profile changed since, nothing is written: 412 profile_changed, carrying the current ETag. Without If-Match the last write wins. `*` matches any ETag; a weak tag (W/…) never matches."
+          },
+          {
             "name": "format",
             "in": "query",
             "required": false,
@@ -6711,6 +6723,9 @@
               },
               "X-RateLimit-Reset": {
                 "$ref": "#/components/headers/X-RateLimit-Reset"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
               }
             }
           },
@@ -6748,6 +6763,51 @@
               },
               "X-RateLimit-Reset": {
                 "$ref": "#/components/headers/X-RateLimit-Reset"
+              }
+            }
+          },
+          "412": {
+            "description": "profile_changed: the profile changed since the ETag sent in If-Match, and nothing was saved. The current ETag is in the body (`etag`) and in the ETag header: read the profile again, apply the change, and send it with If-Match set to that ETag.",
+            "headers": {
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileChanged"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorText"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "profile_invalid: nothing was saved; `errors` lists every field that needs a change, each with a code and what to change. In plaintext, one `field: message` line per entry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileInvalid"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorText"
+                }
               }
             }
           },
@@ -6846,6 +6906,15 @@
         "summary": "Change some fields of the calling handle’s profile: a JSON Merge Patch (RFC 7396), Content-Type application/merge-patch+json; null removes a field, a list is replaced whole. The same validation as PUT.",
         "parameters": [
           {
+            "name": "If-Match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "An ETag of this profile, from its GET or from the answer to the last write. If the profile changed since, nothing is written: 412 profile_changed, carrying the current ETag. Without If-Match the last write wins. `*` matches any ETag; a weak tag (W/…) never matches."
+          },
+          {
             "name": "format",
             "in": "query",
             "required": false,
@@ -6896,6 +6965,9 @@
               },
               "X-RateLimit-Reset": {
                 "$ref": "#/components/headers/X-RateLimit-Reset"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
               }
             }
           },
@@ -6933,6 +7005,71 @@
               },
               "X-RateLimit-Reset": {
                 "$ref": "#/components/headers/X-RateLimit-Reset"
+              }
+            }
+          },
+          "412": {
+            "description": "profile_changed: the profile changed since the ETag sent in If-Match, and nothing was saved. The current ETag is in the body (`etag`) and in the ETag header: read the profile again, apply the change, and send it with If-Match set to that ETag.",
+            "headers": {
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileChanged"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorText"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "unsupported_media_type: PATCH takes a JSON Merge Patch only — Content-Type application/merge-patch+json (RFC 7396). Refused before the body is read or the write budget is spent.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnsupportedMediaType"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorText"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "profile_invalid: nothing was saved; `errors` lists every field that needs a change, each with a code and what to change. In plaintext, one `field: message` line per entry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileInvalid"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorText"
+                }
               }
             }
           },
@@ -7083,6 +7220,9 @@
               },
               "X-RateLimit-Reset": {
                 "$ref": "#/components/headers/X-RateLimit-Reset"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
               }
             }
           },
@@ -7120,6 +7260,26 @@
               },
               "X-RateLimit-Reset": {
                 "$ref": "#/components/headers/X-RateLimit-Reset"
+              }
+            }
+          },
+          "422": {
+            "description": "profile_invalid: nothing was saved; `errors` lists every field that needs a change, each with a code and what to change. In plaintext, one `field: message` line per entry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileInvalid"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorText"
+                }
               }
             }
           },
@@ -7228,6 +7388,15 @@
             }
           },
           {
+            "name": "If-Match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "An ETag of this profile, from its GET or from the answer to the last write. If the profile changed since, nothing is written: 412 profile_changed, carrying the current ETag. Without If-Match the last write wins. `*` matches any ETag; a weak tag (W/…) never matches."
+          },
+          {
             "name": "format",
             "in": "query",
             "required": false,
@@ -7278,6 +7447,9 @@
               },
               "X-RateLimit-Reset": {
                 "$ref": "#/components/headers/X-RateLimit-Reset"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
               }
             }
           },
@@ -7315,6 +7487,51 @@
               },
               "X-RateLimit-Reset": {
                 "$ref": "#/components/headers/X-RateLimit-Reset"
+              }
+            }
+          },
+          "412": {
+            "description": "profile_changed: the profile changed since the ETag sent in If-Match, and nothing was saved. The current ETag is in the body (`etag`) and in the ETag header: read the profile again, apply the change, and send it with If-Match set to that ETag.",
+            "headers": {
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileChanged"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorText"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "profile_invalid: nothing was saved; `errors` lists every field that needs a change, each with a code and what to change. In plaintext, one `field: message` line per entry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileInvalid"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorText"
+                }
               }
             }
           },
@@ -7421,6 +7638,15 @@
             }
           },
           {
+            "name": "If-Match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "An ETag of this profile, from its GET or from the answer to the last write. If the profile changed since, nothing is written: 412 profile_changed, carrying the current ETag. Without If-Match the last write wins. `*` matches any ETag; a weak tag (W/…) never matches."
+          },
+          {
             "name": "format",
             "in": "query",
             "required": false,
@@ -7471,6 +7697,9 @@
               },
               "X-RateLimit-Reset": {
                 "$ref": "#/components/headers/X-RateLimit-Reset"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
               }
             }
           },
@@ -7508,6 +7737,31 @@
               },
               "X-RateLimit-Reset": {
                 "$ref": "#/components/headers/X-RateLimit-Reset"
+              }
+            }
+          },
+          "412": {
+            "description": "profile_changed: the profile changed since the ETag sent in If-Match, and nothing was saved. The current ETag is in the body (`etag`) and in the ETag header: read the profile again, apply the change, and send it with If-Match set to that ETag.",
+            "headers": {
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileChanged"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorText"
+                }
               }
             }
           },
@@ -7992,6 +8246,9 @@
               },
               "X-RateLimit-Reset": {
                 "$ref": "#/components/headers/X-RateLimit-Reset"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
               }
             }
           },
@@ -8099,6 +8356,15 @@
         "summary": "Replace the account’s public profile. published: true publishes it (by your consent) once slug, displayName and summary are valid; false withdraws it at once. Only handles this account owns may be listed. If-Match honoured.",
         "parameters": [
           {
+            "name": "If-Match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "An ETag of this profile, from its GET or from the answer to the last write. If the profile changed since, nothing is written: 412 profile_changed, carrying the current ETag. Without If-Match the last write wins. `*` matches any ETag; a weak tag (W/…) never matches."
+          },
+          {
             "name": "format",
             "in": "query",
             "required": false,
@@ -8149,6 +8415,54 @@
               },
               "X-RateLimit-Reset": {
                 "$ref": "#/components/headers/X-RateLimit-Reset"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              }
+            }
+          },
+          "412": {
+            "description": "profile_changed: the profile changed since the ETag sent in If-Match, and nothing was saved. The current ETag is in the body (`etag`) and in the ETag header: read the profile again, apply the change, and send it with If-Match set to that ETag.",
+            "headers": {
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileChanged"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorText"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "profile_invalid: nothing was saved; `errors` lists every field that needs a change, each with a code and what to change. In plaintext, one `field: message` line per entry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileInvalid"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorText"
+                }
               }
             }
           },
@@ -8267,6 +8581,15 @@
         "summary": "Change some fields of the account’s public profile: a JSON Merge Patch (RFC 7396), Content-Type application/merge-patch+json. The same rules as PUT.",
         "parameters": [
           {
+            "name": "If-Match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "An ETag of this profile, from its GET or from the answer to the last write. If the profile changed since, nothing is written: 412 profile_changed, carrying the current ETag. Without If-Match the last write wins. `*` matches any ETag; a weak tag (W/…) never matches."
+          },
+          {
             "name": "format",
             "in": "query",
             "required": false,
@@ -8317,6 +8640,74 @@
               },
               "X-RateLimit-Reset": {
                 "$ref": "#/components/headers/X-RateLimit-Reset"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              }
+            }
+          },
+          "412": {
+            "description": "profile_changed: the profile changed since the ETag sent in If-Match, and nothing was saved. The current ETag is in the body (`etag`) and in the ETag header: read the profile again, apply the change, and send it with If-Match set to that ETag.",
+            "headers": {
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileChanged"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorText"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "unsupported_media_type: PATCH takes a JSON Merge Patch only — Content-Type application/merge-patch+json (RFC 7396). Refused before the body is read or the write budget is spent.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnsupportedMediaType"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorText"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "profile_invalid: nothing was saved; `errors` lists every field that needs a change, each with a code and what to change. In plaintext, one `field: message` line per entry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileInvalid"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorText"
+                }
               }
             }
           },
@@ -9931,6 +10322,12 @@
       }
     },
     "headers": {
+      "ETag": {
+        "description": "The profile’s current entity tag (a strong, quoted ETag). Send it back as If-Match on a write, so that the write is refused (412 profile_changed) rather than overwriting a change made since.",
+        "schema": {
+          "type": "string"
+        }
+      },
       "RateLimit-Policy": {
         "description": "One entry per counter the scope implies, comma-separated: `\"<scope>\";q=<max>;w=<window seconds>` (draft-ietf-httpapi-ratelimit-headers).",
         "schema": {
@@ -10021,6 +10418,104 @@
           "incident": {
             "type": "string",
             "description": "Only on a 500: the incident id."
+          }
+        }
+      },
+      "ProfileChanged": {
+        "type": "object",
+        "description": "412 profile_changed: If-Match named an ETag that is not the profile’s current one; nothing was saved.",
+        "required": [
+          "error",
+          "message",
+          "etag"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "const": "profile_changed"
+          },
+          "message": {
+            "type": "string"
+          },
+          "hint": {
+            "type": "string"
+          },
+          "etag": {
+            "type": "string",
+            "description": "The profile’s CURRENT ETag — the same value as the ETag header."
+          }
+        }
+      },
+      "UnsupportedMediaType": {
+        "type": "object",
+        "description": "415 unsupported_media_type: a PATCH of a profile was not sent as application/merge-patch+json.",
+        "required": [
+          "error",
+          "message"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "const": "unsupported_media_type"
+          },
+          "message": {
+            "type": "string"
+          },
+          "hint": {
+            "type": "string"
+          }
+        }
+      },
+      "ProfileInvalid": {
+        "type": "object",
+        "description": "422 profile_invalid: the profile was not saved; every field that needs a change is listed.",
+        "required": [
+          "error",
+          "message",
+          "errors"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "const": "profile_invalid"
+          },
+          "message": {
+            "type": "string"
+          },
+          "hint": {
+            "type": "string"
+          },
+          "errors": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "field",
+                "code",
+                "message"
+              ],
+              "properties": {
+                "field": {
+                  "type": "string",
+                  "description": "A JSON path, such as `summary` or `skills[2].name`; `(unknown field)` for a key not shaped like a field path."
+                },
+                "code": {
+                  "type": "string",
+                  "enum": [
+                    "required_to_list",
+                    "required_to_publish",
+                    "too_long",
+                    "invalid_format",
+                    "too_many"
+                  ]
+                },
+                "message": {
+                  "type": "string",
+                  "description": "What to change, in one constant sentence."
+                }
+              }
+            }
           }
         }
       },

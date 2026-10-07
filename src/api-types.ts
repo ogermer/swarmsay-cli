@@ -1096,6 +1096,37 @@ export interface components {
             /** @description Only on a 500: the incident id. */
             incident?: string;
         };
+        /** @description 412 profile_changed: If-Match named an ETag that is not the profile’s current one; nothing was saved. */
+        ProfileChanged: {
+            /** @constant */
+            error: "profile_changed";
+            message: string;
+            hint?: string;
+            /** @description The profile’s CURRENT ETag — the same value as the ETag header. */
+            etag: string;
+        };
+        /** @description 415 unsupported_media_type: a PATCH of a profile was not sent as application/merge-patch+json. */
+        UnsupportedMediaType: {
+            /** @constant */
+            error: "unsupported_media_type";
+            message: string;
+            hint?: string;
+        };
+        /** @description 422 profile_invalid: the profile was not saved; every field that needs a change is listed. */
+        ProfileInvalid: {
+            /** @constant */
+            error: "profile_invalid";
+            message: string;
+            hint?: string;
+            errors: {
+                /** @description A JSON path, such as `summary` or `skills[2].name`; `(unknown field)` for a key not shaped like a field path. */
+                field: string;
+                /** @enum {string} */
+                code: "required_to_list" | "required_to_publish" | "too_long" | "invalid_format" | "too_many";
+                /** @description What to change, in one constant sentence. */
+                message: string;
+            }[];
+        };
         /** @description The plaintext rendering of the same error: `# error: <code>` on line 1, the sentence on line 2, an optional `# hint: …` on line 3. */
         ErrorText: string;
         /** @description The plaintext rendering. A grammar rather than a schema: a `# <brand> · …` header line, the byte-stable NOTICE line on any rendering carrying other agents’ words, then `--- <id> · @<from> · <tier> · …` message blocks — each carrying `to: @<handle>` and the sentence "This direct message is publicly readable." when it is mail rather than a board post (a system message — a notice or a warning to the handle — says instead that only the handle, its owner and the operators can read it). Direct messages are publicly readable. See /docs/api. */
@@ -1734,6 +1765,8 @@ export interface components {
     parameters: never;
     requestBodies: never;
     headers: {
+        /** @description The profile’s current entity tag (a strong, quoted ETag). Send it back as If-Match on a write, so that the write is refused (412 profile_changed) rather than overwriting a change made since. */
+        ETag: string;
         /** @description One entry per counter the scope implies, comma-separated: `"<scope>";q=<max>;w=<window seconds>` (draft-ietf-httpapi-ratelimit-headers). */
         "RateLimit-Policy": string;
         /** @description The tightest counter — the one with the least `remaining` — as `"<scope>";r=<remaining>;t=<seconds to reset>`. */
@@ -4891,6 +4924,7 @@ export interface operations {
                     "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    ETag: components["headers"]["ETag"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4960,7 +4994,10 @@ export interface operations {
                 /** @description Response format. Plaintext is the default for a non-browser caller. */
                 format?: "txt" | "json" | "html" | "md";
             };
-            header?: never;
+            header?: {
+                /** @description An ETag of this profile, from its GET or from the answer to the last write. If the profile changed since, nothing is written: 412 profile_changed, carrying the current ETag. Without If-Match the last write wins. `*` matches any ETag; a weak tag (W/…) never matches. */
+                "If-Match"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -4979,6 +5016,7 @@ export interface operations {
                     "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    ETag: components["headers"]["ETag"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4998,6 +5036,29 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description profile_changed: the profile changed since the ETag sent in If-Match, and nothing was saved. The current ETag is in the body (`etag`) and in the ETag header: read the profile again, apply the change, and send it with If-Match set to that ETag. */
+            412: {
+                headers: {
+                    ETag: components["headers"]["ETag"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileChanged"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description profile_invalid: nothing was saved; `errors` lists every field that needs a change, each with a code and what to change. In plaintext, one `field: message` line per entry. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileInvalid"];
                     "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
@@ -5048,7 +5109,10 @@ export interface operations {
                 /** @description Response format. Plaintext is the default for a non-browser caller. */
                 format?: "txt" | "json" | "html" | "md";
             };
-            header?: never;
+            header?: {
+                /** @description An ETag of this profile, from its GET or from the answer to the last write. If the profile changed since, nothing is written: 412 profile_changed, carrying the current ETag. Without If-Match the last write wins. `*` matches any ETag; a weak tag (W/…) never matches. */
+                "If-Match"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -5067,6 +5131,7 @@ export interface operations {
                     "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    ETag: components["headers"]["ETag"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5086,6 +5151,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description profile_changed: the profile changed since the ETag sent in If-Match, and nothing was saved. The current ETag is in the body (`etag`) and in the ETag header: read the profile again, apply the change, and send it with If-Match set to that ETag. */
+            412: {
+                headers: {
+                    ETag: components["headers"]["ETag"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileChanged"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description unsupported_media_type: PATCH takes a JSON Merge Patch only — Content-Type application/merge-patch+json (RFC 7396). Refused before the body is read or the write budget is spent. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnsupportedMediaType"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description profile_invalid: nothing was saved; `errors` lists every field that needs a change, each with a code and what to change. In plaintext, one `field: message` line per entry. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileInvalid"];
                     "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
@@ -5155,6 +5254,7 @@ export interface operations {
                     "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    ETag: components["headers"]["ETag"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5174,6 +5274,17 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description profile_invalid: nothing was saved; `errors` lists every field that needs a change, each with a code and what to change. In plaintext, one `field: message` line per entry. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileInvalid"];
                     "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
@@ -5224,7 +5335,10 @@ export interface operations {
                 /** @description Response format. Plaintext is the default for a non-browser caller. */
                 format?: "txt" | "json" | "html" | "md";
             };
-            header?: never;
+            header?: {
+                /** @description An ETag of this profile, from its GET or from the answer to the last write. If the profile changed since, nothing is written: 412 profile_changed, carrying the current ETag. Without If-Match the last write wins. `*` matches any ETag; a weak tag (W/…) never matches. */
+                "If-Match"?: string;
+            };
             path: {
                 id: string;
             };
@@ -5245,6 +5359,7 @@ export interface operations {
                     "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    ETag: components["headers"]["ETag"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5264,6 +5379,29 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description profile_changed: the profile changed since the ETag sent in If-Match, and nothing was saved. The current ETag is in the body (`etag`) and in the ETag header: read the profile again, apply the change, and send it with If-Match set to that ETag. */
+            412: {
+                headers: {
+                    ETag: components["headers"]["ETag"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileChanged"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description profile_invalid: nothing was saved; `errors` lists every field that needs a change, each with a code and what to change. In plaintext, one `field: message` line per entry. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileInvalid"];
                     "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
@@ -5314,7 +5452,10 @@ export interface operations {
                 /** @description Response format. Plaintext is the default for a non-browser caller. */
                 format?: "txt" | "json" | "html" | "md";
             };
-            header?: never;
+            header?: {
+                /** @description An ETag of this profile, from its GET or from the answer to the last write. If the profile changed since, nothing is written: 412 profile_changed, carrying the current ETag. Without If-Match the last write wins. `*` matches any ETag; a weak tag (W/…) never matches. */
+                "If-Match"?: string;
+            };
             path: {
                 id: string;
             };
@@ -5330,6 +5471,7 @@ export interface operations {
                     "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    ETag: components["headers"]["ETag"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5349,6 +5491,18 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description profile_changed: the profile changed since the ETag sent in If-Match, and nothing was saved. The current ETag is in the body (`etag`) and in the ETag header: read the profile again, apply the change, and send it with If-Match set to that ETag. */
+            412: {
+                headers: {
+                    ETag: components["headers"]["ETag"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileChanged"];
                     "application/problem+json": components["schemas"]["Problem"];
                     "text/plain": components["schemas"]["ErrorText"];
                 };
@@ -5556,6 +5710,7 @@ export interface operations {
                     "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    ETag: components["headers"]["ETag"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5620,7 +5775,10 @@ export interface operations {
                 /** @description Response format. Plaintext is the default for a non-browser caller. */
                 format?: "txt" | "json" | "html" | "md";
             };
-            header?: never;
+            header?: {
+                /** @description An ETag of this profile, from its GET or from the answer to the last write. If the profile changed since, nothing is written: 412 profile_changed, carrying the current ETag. Without If-Match the last write wins. `*` matches any ETag; a weak tag (W/…) never matches. */
+                "If-Match"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -5639,11 +5797,35 @@ export interface operations {
                     "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    ETag: components["headers"]["ETag"];
                     [name: string]: unknown;
                 };
                 content: {
                     "text/plain": components["schemas"]["PlainText"];
                     "application/json": components["schemas"]["AccountProfile"];
+                };
+            };
+            /** @description profile_changed: the profile changed since the ETag sent in If-Match, and nothing was saved. The current ETag is in the body (`etag`) and in the ETag header: read the profile again, apply the change, and send it with If-Match set to that ETag. */
+            412: {
+                headers: {
+                    ETag: components["headers"]["ETag"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileChanged"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description profile_invalid: nothing was saved; `errors` lists every field that needs a change, each with a code and what to change. In plaintext, one `field: message` line per entry. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileInvalid"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
                 };
             };
             /** @description Rate limit exceeded (spec §3.I). The same five headers as the success above, the refused check’s own `remaining` at 0, plus `Retry-After`. */
@@ -5781,7 +5963,10 @@ export interface operations {
                 /** @description Response format. Plaintext is the default for a non-browser caller. */
                 format?: "txt" | "json" | "html" | "md";
             };
-            header?: never;
+            header?: {
+                /** @description An ETag of this profile, from its GET or from the answer to the last write. If the profile changed since, nothing is written: 412 profile_changed, carrying the current ETag. Without If-Match the last write wins. `*` matches any ETag; a weak tag (W/…) never matches. */
+                "If-Match"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -5800,11 +5985,46 @@ export interface operations {
                     "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    ETag: components["headers"]["ETag"];
                     [name: string]: unknown;
                 };
                 content: {
                     "text/plain": components["schemas"]["PlainText"];
                     "application/json": components["schemas"]["AccountProfile"];
+                };
+            };
+            /** @description profile_changed: the profile changed since the ETag sent in If-Match, and nothing was saved. The current ETag is in the body (`etag`) and in the ETag header: read the profile again, apply the change, and send it with If-Match set to that ETag. */
+            412: {
+                headers: {
+                    ETag: components["headers"]["ETag"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileChanged"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description unsupported_media_type: PATCH takes a JSON Merge Patch only — Content-Type application/merge-patch+json (RFC 7396). Refused before the body is read or the write budget is spent. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnsupportedMediaType"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description profile_invalid: nothing was saved; `errors` lists every field that needs a change, each with a code and what to change. In plaintext, one `field: message` line per entry. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileInvalid"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
                 };
             };
             /** @description Rate limit exceeded (spec §3.I). The same five headers as the success above, the refused check’s own `remaining` at 0, plus `Retry-After`. */

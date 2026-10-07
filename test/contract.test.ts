@@ -257,6 +257,73 @@ describe('the profile contract', () => {
   });
 });
 
+describe('profile concurrency, as the CLI uses it', () => {
+  type Op = {
+    parameters?: Array<{ name?: string; in?: string }>;
+    responses: Record<
+      string,
+      { headers?: Record<string, unknown>; content?: Record<string, { schema?: { $ref?: string } }> }
+    >;
+  };
+  const P = spec.paths as unknown as Record<string, Record<string, Op>>;
+  const S = (
+    spec as unknown as {
+      components: {
+        schemas: Record<
+          string,
+          {
+            required?: string[];
+            properties: Record<
+              string,
+              { const?: string; items?: { properties?: Record<string, { enum?: string[] }> } }
+            >;
+          }
+        >;
+      };
+    }
+  ).components.schemas;
+  const ref = (op: Op, code: string) => op.responses[code]?.content?.['application/json']?.schema?.$ref;
+
+  // Reading gives the ETag the CLI sends back.
+  for (const [route, method] of [
+    ['/profile', 'get'],
+    ['/account/profile', 'get'],
+  ] as const) {
+    it(`${method.toUpperCase()} ${route} answers with an ETag header`, () => {
+      expect(P[route]![method]!.responses['200']!.headers).toHaveProperty('ETag');
+    });
+  }
+
+  // Every write the CLI makes with If-Match documents it, and the 412 that carries the current ETag.
+  for (const [route, method] of [
+    ['/profile', 'put'],
+    ['/profile', 'patch'],
+    ['/profile/skills/{id}', 'delete'],
+    ['/account/profile', 'put'],
+    ['/account/profile', 'patch'],
+  ] as const) {
+    it(`${method.toUpperCase()} ${route} takes If-Match and answers 412 ProfileChanged`, () => {
+      const op = P[route]![method]!;
+      expect(op.parameters?.some((p) => p.name === 'If-Match' && p.in === 'header')).toBe(true);
+      expect(ref(op, '412')).toBe('#/components/schemas/ProfileChanged');
+    });
+  }
+
+  it('412 carries the current ETag; 415 and 422 have the shapes the CLI prints', () => {
+    expect(S.ProfileChanged!.properties.error!.const).toBe('profile_changed');
+    expect(S.ProfileChanged!.required).toEqual(expect.arrayContaining(['etag']));
+    expect(S.UnsupportedMediaType!.properties.error!.const).toBe('unsupported_media_type');
+    expect(S.ProfileInvalid!.properties.error!.const).toBe('profile_invalid');
+    const item = S.ProfileInvalid!.properties.errors!.items!.properties!;
+    expect(Object.keys(item)).toEqual(expect.arrayContaining(['field', 'code', 'message']));
+    expect(item.code!.enum).toEqual(expect.arrayContaining(['required_to_list', 'required_to_publish']));
+    for (const route of ['/profile', '/account/profile']) {
+      expect(ref(P[route]!.patch!, '415')).toBe('#/components/schemas/UnsupportedMediaType');
+      expect(ref(P[route]!.patch!, '422')).toBe('#/components/schemas/ProfileInvalid');
+    }
+  });
+});
+
 describe('identity', () => {
   it('the version matches package.json', () => {
     const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as {
