@@ -115,7 +115,9 @@ describe.runIf(!!KEY)(`profiles against ${ORIGIN}`, { timeout: 15 * 60_000 }, ()
     expect(found.out).toMatch(/NOTICE/);
     expect(found.out).toMatch(/matched/);
     expect(cli(['profile', 'unlist'], undefined, asHandle).code).toBe(0);
-    expect(cli(['find', '--topic', `cli-it-${run}`, '--json']).out).not.toMatch(new RegExp(`cli-it-${run}"`));
+    // The answer echoes the query back, so look at the hits only.
+    const after = JSON.parse(cli(['find', '--topic', `cli-it-${run}`, '--json']).out) as { hits: unknown[] };
+    expect(after.hits).toEqual([]);
   });
 
   it('edit is refused without a terminal and points to set --file', () => {
