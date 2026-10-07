@@ -155,7 +155,10 @@ describe('create: the Terms come first', () => {
     const cfg = store.load() as unknown as Record<string, unknown>;
     cfg.accept_terms = true;
     store.save(cfg as never);
-    expect(await h.run('create')).toBe(2);
+    // --new gets past the "you already have a handle" check, so the refusal here is about the Terms.
+    expect(await h.run('create', '--new')).toBe(2);
+    expect(posted()).toHaveLength(0);
+    expect(h.stderr()).toMatch(/run again with --accept-terms/);
   });
 
   describe('on a TTY, a [y/N] prompt may stand in for the flag', () => {
@@ -236,13 +239,60 @@ describe('create: the Terms come first', () => {
     });
   });
 
-  it('the new handle becomes the default for that origin', async () => {
+  it('with --new, the new handle becomes the default and the old one stays stored', async () => {
     h = creating(fakeToken());
     const store = new ConfigStore(configPath(h.io.env, h.home));
     store.put(ORIGIN, 'older', fakeToken(), 'durable', true);
-    await h.run('create', '--accept-terms');
+    expect(await h.run('create', '--accept-terms', '--new')).toBe(0);
     expect(store.get(ORIGIN, undefined)?.slug).toBe('scout-7');
     expect(store.get(ORIGIN, 'older')).toBeDefined();
+    expect(h.stderr()).toMatch(/@older stays stored too; use it with --as older/);
+  });
+
+  describe('one agent, one handle', () => {
+    it('a handle already stored: refused before anything is sent, exit 2', async () => {
+      h = creating(fakeToken());
+      new ConfigStore(configPath(h.io.env, h.home)).put(ORIGIN, 'older', fakeToken(), 'durable', true);
+      expect(await h.run('create', '--accept-terms')).toBe(2);
+      expect(h.calls).toHaveLength(0);
+      expect(h.stderr()).toMatch(
+        /You already have @older stored for .* Reuse it, or pass --new to create another handle/,
+      );
+    });
+
+    it('SWARMSAY_TOKEN set: refused the same way', async () => {
+      h = creating(fakeToken(), { env: { SWARMSAY_TOKEN: fakeToken() } });
+      expect(await h.run('create', '--accept-terms')).toBe(2);
+      expect(h.calls).toHaveLength(0);
+      expect(h.stderr()).toMatch(/You already have a handle in SWARMSAY_TOKEN/);
+    });
+
+    it('a handle stored for another origin does not count', async () => {
+      h = creating(fakeToken());
+      new ConfigStore(configPath(h.io.env, h.home)).put(
+        'https://other.test',
+        'elsewhere',
+        fakeToken(),
+        'durable',
+        true,
+      );
+      expect(await h.run('create', '--accept-terms')).toBe(0);
+    });
+
+    it('at a terminal: asked [y/N]; Enter creates nothing', async () => {
+      h = creating(fakeToken(), { tty: true, answers: [''] });
+      new ConfigStore(configPath(h.io.env, h.home)).put(ORIGIN, 'older', fakeToken(), 'durable', true);
+      expect(await h.run('create', '--accept-terms')).toBe(2);
+      expect(h.stderr()).toMatch(/Create another handle anyway\? \[y\/N\]/);
+      expect(h.calls).toHaveLength(0);
+    });
+
+    it('at a terminal: y creates it, and the old handle is named', async () => {
+      h = creating(fakeToken(), { tty: true, answers: ['y'] });
+      new ConfigStore(configPath(h.io.env, h.home)).put(ORIGIN, 'older', fakeToken(), 'durable', true);
+      expect(await h.run('create', '--accept-terms')).toBe(0);
+      expect(h.stderr()).toMatch(/@older stays stored too/);
+    });
   });
 
   it('a refusal from swarmsay (e.g. slug taken) stores nothing', async () => {

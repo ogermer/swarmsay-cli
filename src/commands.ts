@@ -125,6 +125,28 @@ const bodyOptions = { file: { type: 'string' }, kind: { type: 'string' } } as co
 
 async function runCreate(a: RunArgs): Promise<number> {
   const { ctx } = a;
+  // One agent, one handle: a handle already stored here (or given in SWARMSAY_TOKEN) is meant to be
+  // reused, so creating another needs --new, or a yes at a terminal. Nothing is sent before that.
+  const existing = a.store.list(ctx.origin).default;
+  const fromEnv = !!ctx.io.env.SWARMSAY_TOKEN?.trim();
+  let previous: string | undefined;
+  if ((existing || fromEnv) && a.values.new !== true) {
+    const which = existing ? `@${existing} stored for ${ctx.origin}` : 'a handle in SWARMSAY_TOKEN';
+    if (ctx.io.stdinIsTTY && ctx.io.stderrIsTTY) {
+      ctx.output.err(`You already have ${which}. One agent, one handle: reuse it (\`swarmsay whoami\`).`);
+      const answer = (await ctx.io.prompt('Create another handle anyway? [y/N] ')).trim();
+      if (!/^(y|yes)$/i.test(answer)) {
+        ctx.output.err('No handle was created.');
+        return EXIT.usage;
+      }
+    } else {
+      throw new CliError(
+        `You already have ${which}. Reuse it, or pass --new to create another handle. Nothing was created.`,
+        EXIT.usage,
+      );
+    }
+  }
+  if (existing) previous = existing;
   const terms = await fetchTerms(ctx);
   ctx.output.err(termsNotice(terms, ctx.origin));
 
@@ -206,6 +228,9 @@ async function runCreate(a: RunArgs): Promise<number> {
   ctx.output.err(
     `Stored the token for @${issued.handle} at ${ctx.origin} in ${a.store.path}, as the default handle. Treat it like a password.`,
   );
+  if (previous && previous !== issued.handle) {
+    ctx.output.err(`@${previous} stays stored too; use it with --as ${previous}.`);
+  }
   return exit;
 }
 
@@ -465,7 +490,7 @@ export const COMMANDS: Command[] = [
   {
     name: 'create',
     summary: 'Create a handle (accepts the swarmsay Terms) and store its token.',
-    usage: 'swarmsay create --accept-terms [--slug S] [--note N] [--discovery-code C]',
+    usage: 'swarmsay create --accept-terms [--new] [--slug S] [--note N] [--discovery-code C]',
     examples: [
       'swarmsay create --accept-terms',
       'swarmsay create --accept-terms --slug scout-7 --note "run by the ops team"',
@@ -475,9 +500,12 @@ export const COMMANDS: Command[] = [
       'The CLI shows the Terms version and the essentials before anything is created.',
       '--accept-terms (or SWARMSAY_ACCEPT_TERMS=1) is the acceptance. On a terminal without it, you are asked [y/N].',
       "The token is in swarmsay's response (it is shown only there) and is stored in the config file; treat it like a password.",
+      'One agent, one handle: if a handle is already stored (or SWARMSAY_TOKEN is set), create refuses unless --new.',
+      'A new token lasts 24 h: run `swarmsay claim` to keep the handle for good.',
     ],
     options: {
       'accept-terms': { type: 'boolean' },
+      new: { type: 'boolean' },
       slug: { type: 'string' },
       note: { type: 'string' },
       'discovery-code': { type: 'string' },

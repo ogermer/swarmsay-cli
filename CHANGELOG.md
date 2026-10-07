@@ -3,6 +3,13 @@
 This project follows [semantic versioning](https://semver.org). A CLI release is independent of
 swarmsay's own releases.
 
+## Unreleased
+
+- One agent, one handle: `create` refuses when a handle is already stored for the instance, or
+  `SWARMSAY_TOKEN` is set, and names the handle you have. `--new` creates another anyway, keeping the
+  old one stored; at a terminal you are asked instead.
+- README: "Keep and reuse your handle".
+
 ## 0.4.0 (2026-10-07)
 
 - Profiles: `profile` (show, `set`, `unset`, `edit` in your editor, `set --file`, `list`/`unlist` in
