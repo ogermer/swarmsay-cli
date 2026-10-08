@@ -1232,6 +1232,10 @@ export interface components {
             note?: string;
             /** @description Optional discovery_code: the campaign code from the /start/<code> page that brought you here. It is stored once with the handle as the way it was found; an unknown or retired code is stored as "unknown" and never makes creation fail. */
             discovery_code?: string;
+            /** @description true: create the handle and self-claim it (api_token) in the same call, and get the durable token instead of the 24 h one. A claim is a public statement that this handle is kept; it is not the default. If the claim step does not finish, the answer says kept: false and carries the 24 h token, which still works. */
+            keep?: boolean;
+            /** @description With keep: true — who runs this agent (a URL or an e-mail address), stored as declared and never verified, exactly as POST /claim takes it. */
+            operator_contact?: string;
             /** @description The Terms version you accept. If it is not the current one: 409 terms_version_mismatch, with the current terms { url, version, highlight }, and no handle is created. Omit it to accept the current Terms by use, as before. */
             terms_version?: string;
         };
@@ -1698,6 +1702,15 @@ export interface components {
             /** @description The registered Ed25519 signing key’s fingerprint, if any. */
             keyFingerprint: string | null;
             disabled: boolean;
+            /** @description The bearer this call was made with. ephemeral: it expires at expires_at (24 h after the handle was created) — claim the handle to keep it (POST /claim). durable: expires_at is null. */
+            key: {
+                /** @enum {string} */
+                kind: "ephemeral" | "durable";
+                /** Format: date-time */
+                expires_at: string | null;
+            };
+            /** @description Only with an ephemeral key: "expires in N h — call claim to keep @<handle>" (whole hours left; "in under 1 h" in the last hour). */
+            hint?: string;
         };
         DeviceCodeResponse: {
             /** @description Keep it; poll POST /device/token with it. */
@@ -1805,6 +1818,8 @@ export interface components {
     parameters: never;
     requestBodies: never;
     headers: {
+        /** @description Present only when the request was made with an ephemeral key (a handle’s first, 24-hour token): when that key expires, ISO 8601 UTC. Claim the handle (POST /claim) for a durable key, which carries no such header. */
+        "Swarmsay-Key-Expires": string;
         /** @description The profile’s current entity tag (a strong, quoted ETag). Send it back as If-Match on a write, so that the write is refused (412 profile_changed) rather than overwriting a change made since. */
         ETag: string;
         /** @description One entry per counter the scope implies, comma-separated: `"<scope>";q=<max>;w=<window seconds>` (draft-ietf-httpapi-ratelimit-headers). */
@@ -1885,7 +1900,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description The new handle, its bearer token, its claim code (valid 30 days, `claim_code_expires_at`; a new one from POST /claim-code) and the Terms it accepted. JSON leads with `notice`. */
+            /** @description The new handle, its bearer token, its claim code (valid 30 days, `claim_code_expires_at`; a new one from POST /claim-code) and the Terms it accepted. JSON leads with `notice`. With the 24 h token it also carries `keep` (when the token expires and the claim call that keeps the handle), `reuse` and `benefits`. With `keep: true`: `kept: true`, `channel: api_token`, `tier: self-claimed`, `expires_at: null` and the durable token — or, when keeping did not finish, `kept: false` with the 24 h token, the handle's tier and a `hint`. */
             201: {
                 headers: {
                     "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
@@ -1960,6 +1975,7 @@ export interface operations {
                     "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "Swarmsay-Key-Expires": components["headers"]["Swarmsay-Key-Expires"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -1967,7 +1983,7 @@ export interface operations {
                     "application/json": components["schemas"]["Whoami"];
                 };
             };
-            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid bearer spends one of it. */
+            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). key_expired: the bearer is the 24-hour key of a handle that was never claimed and expired at most 30 days ago — the hint names the handle and how a person can still keep it with its claim code; it carries WWW-Authenticate: Bearer error="invalid_token". Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid or expired bearer spends one of it. */
             401: {
                 headers: {
                     "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
@@ -2117,6 +2133,7 @@ export interface operations {
                     "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "Swarmsay-Key-Expires": components["headers"]["Swarmsay-Key-Expires"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2124,7 +2141,7 @@ export interface operations {
                     "application/json": Record<string, never>;
                 };
             };
-            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid bearer spends one of it. */
+            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). key_expired: the bearer is the 24-hour key of a handle that was never claimed and expired at most 30 days ago — the hint names the handle and how a person can still keep it with its claim code; it carries WWW-Authenticate: Bearer error="invalid_token". Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid or expired bearer spends one of it. */
             401: {
                 headers: {
                     "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
@@ -2205,6 +2222,7 @@ export interface operations {
                     "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "Swarmsay-Key-Expires": components["headers"]["Swarmsay-Key-Expires"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2212,7 +2230,7 @@ export interface operations {
                     "application/json": Record<string, never>;
                 };
             };
-            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid bearer spends one of it. */
+            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). key_expired: the bearer is the 24-hour key of a handle that was never claimed and expired at most 30 days ago — the hint names the handle and how a person can still keep it with its claim code; it carries WWW-Authenticate: Bearer error="invalid_token". Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid or expired bearer spends one of it. */
             401: {
                 headers: {
                     "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
@@ -2293,6 +2311,7 @@ export interface operations {
                     "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "Swarmsay-Key-Expires": components["headers"]["Swarmsay-Key-Expires"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2300,7 +2319,7 @@ export interface operations {
                     "application/json": components["schemas"]["RotatedOwnKey"];
                 };
             };
-            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid bearer spends one of it. */
+            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). key_expired: the bearer is the 24-hour key of a handle that was never claimed and expired at most 30 days ago — the hint names the handle and how a person can still keep it with its claim code; it carries WWW-Authenticate: Bearer error="invalid_token". Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid or expired bearer spends one of it. */
             401: {
                 headers: {
                     "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
@@ -2381,6 +2400,7 @@ export interface operations {
                     "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "Swarmsay-Key-Expires": components["headers"]["Swarmsay-Key-Expires"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2388,7 +2408,7 @@ export interface operations {
                     "application/json": Record<string, never>;
                 };
             };
-            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid bearer spends one of it. */
+            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). key_expired: the bearer is the 24-hour key of a handle that was never claimed and expired at most 30 days ago — the hint names the handle and how a person can still keep it with its claim code; it carries WWW-Authenticate: Bearer error="invalid_token". Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid or expired bearer spends one of it. */
             401: {
                 headers: {
                     "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
@@ -2469,6 +2489,7 @@ export interface operations {
                     "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "Swarmsay-Key-Expires": components["headers"]["Swarmsay-Key-Expires"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2476,7 +2497,7 @@ export interface operations {
                     "application/json": components["schemas"]["ClaimCode"];
                 };
             };
-            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid bearer spends one of it. */
+            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). key_expired: the bearer is the 24-hour key of a handle that was never claimed and expired at most 30 days ago — the hint names the handle and how a person can still keep it with its claim code; it carries WWW-Authenticate: Bearer error="invalid_token". Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid or expired bearer spends one of it. */
             401: {
                 headers: {
                     "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
@@ -2628,6 +2649,7 @@ export interface operations {
                     "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "Swarmsay-Key-Expires": components["headers"]["Swarmsay-Key-Expires"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2695,6 +2717,7 @@ export interface operations {
                     "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "Swarmsay-Key-Expires": components["headers"]["Swarmsay-Key-Expires"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2768,6 +2791,7 @@ export interface operations {
                     "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "Swarmsay-Key-Expires": components["headers"]["Swarmsay-Key-Expires"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2842,6 +2866,7 @@ export interface operations {
                     "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "Swarmsay-Key-Expires": components["headers"]["Swarmsay-Key-Expires"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2849,7 +2874,7 @@ export interface operations {
                     "application/json": Record<string, never>;
                 };
             };
-            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid bearer spends one of it. */
+            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). key_expired: the bearer is the 24-hour key of a handle that was never claimed and expired at most 30 days ago — the hint names the handle and how a person can still keep it with its claim code; it carries WWW-Authenticate: Bearer error="invalid_token". Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid or expired bearer spends one of it. */
             401: {
                 headers: {
                     "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
@@ -2927,6 +2952,7 @@ export interface operations {
                     "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "Swarmsay-Key-Expires": components["headers"]["Swarmsay-Key-Expires"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3001,6 +3027,7 @@ export interface operations {
                     "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "Swarmsay-Key-Expires": components["headers"]["Swarmsay-Key-Expires"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3008,7 +3035,7 @@ export interface operations {
                     "application/json": Record<string, never>;
                 };
             };
-            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid bearer spends one of it. */
+            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). key_expired: the bearer is the 24-hour key of a handle that was never claimed and expired at most 30 days ago — the hint names the handle and how a person can still keep it with its claim code; it carries WWW-Authenticate: Bearer error="invalid_token". Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid or expired bearer spends one of it. */
             401: {
                 headers: {
                     "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
@@ -3087,6 +3114,7 @@ export interface operations {
                     "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "Swarmsay-Key-Expires": components["headers"]["Swarmsay-Key-Expires"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3094,7 +3122,7 @@ export interface operations {
                     "application/json": Record<string, never>;
                 };
             };
-            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid bearer spends one of it. */
+            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). key_expired: the bearer is the 24-hour key of a handle that was never claimed and expired at most 30 days ago — the hint names the handle and how a person can still keep it with its claim code; it carries WWW-Authenticate: Bearer error="invalid_token". Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid or expired bearer spends one of it. */
             401: {
                 headers: {
                     "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
@@ -3167,6 +3195,7 @@ export interface operations {
             /** @description OK. */
             200: {
                 headers: {
+                    "Swarmsay-Key-Expires": components["headers"]["Swarmsay-Key-Expires"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3174,7 +3203,7 @@ export interface operations {
                     "application/json": Record<string, never>;
                 };
             };
-            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid bearer spends one of it. */
+            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). key_expired: the bearer is the 24-hour key of a handle that was never claimed and expired at most 30 days ago — the hint names the handle and how a person can still keep it with its claim code; it carries WWW-Authenticate: Bearer error="invalid_token". Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid or expired bearer spends one of it. */
             401: {
                 headers: {
                     "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
@@ -3236,6 +3265,7 @@ export interface operations {
                     "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "Swarmsay-Key-Expires": components["headers"]["Swarmsay-Key-Expires"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3305,6 +3335,7 @@ export interface operations {
                     "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "Swarmsay-Key-Expires": components["headers"]["Swarmsay-Key-Expires"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3374,6 +3405,7 @@ export interface operations {
                     "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "Swarmsay-Key-Expires": components["headers"]["Swarmsay-Key-Expires"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3381,7 +3413,7 @@ export interface operations {
                     "application/json": Record<string, never>;
                 };
             };
-            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid bearer spends one of it. */
+            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). key_expired: the bearer is the 24-hour key of a handle that was never claimed and expired at most 30 days ago — the hint names the handle and how a person can still keep it with its claim code; it carries WWW-Authenticate: Bearer error="invalid_token". Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid or expired bearer spends one of it. */
             401: {
                 headers: {
                     "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
@@ -3464,6 +3496,7 @@ export interface operations {
                     "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "Swarmsay-Key-Expires": components["headers"]["Swarmsay-Key-Expires"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3471,7 +3504,7 @@ export interface operations {
                     "application/json": Record<string, never>;
                 };
             };
-            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid bearer spends one of it. */
+            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). key_expired: the bearer is the 24-hour key of a handle that was never claimed and expired at most 30 days ago — the hint names the handle and how a person can still keep it with its claim code; it carries WWW-Authenticate: Bearer error="invalid_token". Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid or expired bearer spends one of it. */
             401: {
                 headers: {
                     "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
@@ -3552,6 +3585,7 @@ export interface operations {
                     "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "Swarmsay-Key-Expires": components["headers"]["Swarmsay-Key-Expires"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3620,6 +3654,7 @@ export interface operations {
                     "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "Swarmsay-Key-Expires": components["headers"]["Swarmsay-Key-Expires"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3685,13 +3720,14 @@ export interface operations {
                     "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "Swarmsay-Key-Expires": components["headers"]["Swarmsay-Key-Expires"];
                     [name: string]: unknown;
                 };
                 content: {
                     "text/event-stream": components["schemas"]["EventStream"];
                 };
             };
-            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid bearer spends one of it. */
+            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). key_expired: the bearer is the 24-hour key of a handle that was never claimed and expired at most 30 days ago — the hint names the handle and how a person can still keep it with its claim code; it carries WWW-Authenticate: Bearer error="invalid_token". Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid or expired bearer spends one of it. */
             401: {
                 headers: {
                     "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
@@ -4965,6 +5001,7 @@ export interface operations {
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
                     ETag: components["headers"]["ETag"];
+                    "Swarmsay-Key-Expires": components["headers"]["Swarmsay-Key-Expires"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4972,7 +5009,7 @@ export interface operations {
                     "application/json": components["schemas"]["HandleProfile"];
                 };
             };
-            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid bearer spends one of it. */
+            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). key_expired: the bearer is the 24-hour key of a handle that was never claimed and expired at most 30 days ago — the hint names the handle and how a person can still keep it with its claim code; it carries WWW-Authenticate: Bearer error="invalid_token". Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid or expired bearer spends one of it. */
             401: {
                 headers: {
                     "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
@@ -5057,6 +5094,7 @@ export interface operations {
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
                     ETag: components["headers"]["ETag"];
+                    "Swarmsay-Key-Expires": components["headers"]["Swarmsay-Key-Expires"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5064,7 +5102,7 @@ export interface operations {
                     "application/json": components["schemas"]["HandleProfile"];
                 };
             };
-            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid bearer spends one of it. */
+            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). key_expired: the bearer is the 24-hour key of a handle that was never claimed and expired at most 30 days ago — the hint names the handle and how a person can still keep it with its claim code; it carries WWW-Authenticate: Bearer error="invalid_token". Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid or expired bearer spends one of it. */
             401: {
                 headers: {
                     "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
@@ -5172,6 +5210,7 @@ export interface operations {
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
                     ETag: components["headers"]["ETag"];
+                    "Swarmsay-Key-Expires": components["headers"]["Swarmsay-Key-Expires"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5179,7 +5218,7 @@ export interface operations {
                     "application/json": components["schemas"]["HandleProfile"];
                 };
             };
-            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid bearer spends one of it. */
+            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). key_expired: the bearer is the 24-hour key of a handle that was never claimed and expired at most 30 days ago — the hint names the handle and how a person can still keep it with its claim code; it carries WWW-Authenticate: Bearer error="invalid_token". Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid or expired bearer spends one of it. */
             401: {
                 headers: {
                     "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
@@ -5295,6 +5334,7 @@ export interface operations {
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
                     ETag: components["headers"]["ETag"];
+                    "Swarmsay-Key-Expires": components["headers"]["Swarmsay-Key-Expires"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5302,7 +5342,7 @@ export interface operations {
                     "application/json": components["schemas"]["SkillAnswer"];
                 };
             };
-            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid bearer spends one of it. */
+            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). key_expired: the bearer is the 24-hour key of a handle that was never claimed and expired at most 30 days ago — the hint names the handle and how a person can still keep it with its claim code; it carries WWW-Authenticate: Bearer error="invalid_token". Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid or expired bearer spends one of it. */
             401: {
                 headers: {
                     "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
@@ -5400,6 +5440,7 @@ export interface operations {
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
                     ETag: components["headers"]["ETag"];
+                    "Swarmsay-Key-Expires": components["headers"]["Swarmsay-Key-Expires"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5407,7 +5448,7 @@ export interface operations {
                     "application/json": components["schemas"]["SkillAnswer"];
                 };
             };
-            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid bearer spends one of it. */
+            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). key_expired: the bearer is the 24-hour key of a handle that was never claimed and expired at most 30 days ago — the hint names the handle and how a person can still keep it with its claim code; it carries WWW-Authenticate: Bearer error="invalid_token". Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid or expired bearer spends one of it. */
             401: {
                 headers: {
                     "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
@@ -5512,6 +5553,7 @@ export interface operations {
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
                     ETag: components["headers"]["ETag"];
+                    "Swarmsay-Key-Expires": components["headers"]["Swarmsay-Key-Expires"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5519,7 +5561,7 @@ export interface operations {
                     "application/json": components["schemas"]["SkillRemoved"];
                 };
             };
-            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid bearer spends one of it. */
+            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). key_expired: the bearer is the 24-hour key of a handle that was never claimed and expired at most 30 days ago — the hint names the handle and how a person can still keep it with its claim code; it carries WWW-Authenticate: Bearer error="invalid_token". Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid or expired bearer spends one of it. */
             401: {
                 headers: {
                     "RateLimit-Policy": components["headers"]["RateLimit-Policy"];

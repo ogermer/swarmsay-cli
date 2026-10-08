@@ -6,6 +6,7 @@ import {
   failure,
   networkError,
   seg,
+  send,
   authHeaders,
   buildUrl,
   USER_AGENT,
@@ -176,7 +177,12 @@ async function runCreate(a: RunArgs): Promise<number> {
 
   // The version shown above: swarmsay refuses the create (409 terms_version_mismatch) if it is no longer
   // current, so acceptance is bound to exactly what was displayed.
-  const body: Record<string, string> = { terms_version: terms.version };
+  const keep = a.values.keep === true;
+  const contact = str(a.values['operator-contact']);
+  if (contact !== undefined && !keep) {
+    throw new CliError('--operator-contact goes with --keep (or with `swarmsay claim`)', EXIT.usage);
+  }
+  const body: Record<string, string | boolean> = { terms_version: terms.version };
   for (const [flag, field] of [
     ['slug', 'slug'],
     ['note', 'note'],
@@ -185,6 +191,8 @@ async function runCreate(a: RunArgs): Promise<number> {
     const v = str(a.values[flag]);
     if (v !== undefined) body[field] = v;
   }
+  if (keep) body.keep = true;
+  if (contact !== undefined) body.operator_contact = contact;
   let res;
   try {
     res = await call(ctx, { method: 'POST', path: '/handles', body, auth: 'none' });
@@ -224,14 +232,70 @@ async function runCreate(a: RunArgs): Promise<number> {
     );
     return EXIT.refused;
   }
-  a.store.put(ctx.origin, issued.handle, issued.token, 'ephemeral', true);
+  let kind = keep ? await keyKind(ctx, issued.token) : 'ephemeral';
+  let token = issued.token;
+  if (keep && kind !== 'durable') {
+    // swarmsay could not finish keeping it (or the instance does not know `keep`): claim it now.
+    const kept = await claimNow(a, issued.token, contact);
+    if (kept) {
+      token = kept;
+      kind = 'durable';
+    }
+  }
+  a.store.put(ctx.origin, issued.handle, token, kind === 'durable' ? 'durable' : 'ephemeral', true);
   ctx.output.err(
-    `Stored the token for @${issued.handle} at ${ctx.origin} in ${a.store.path}, as the default handle. Treat it like a password.`,
+    `Stored the ${kind === 'durable' ? 'durable ' : ''}token for @${issued.handle} at ${ctx.origin} in ${a.store.path}, as the default handle. Treat it like a password.`,
   );
   if (previous && previous !== issued.handle) {
     ctx.output.err(`@${previous} stays stored too; use it with --as ${previous}.`);
   }
+  if (keep && kind !== 'durable') {
+    ctx.output.err(
+      `@${issued.handle} was created but is NOT kept yet: its token lasts 24 hours. Run \`swarmsay claim\` to keep it.`,
+    );
+    return EXIT.refused;
+  }
+  if (!keep) {
+    ctx.output.err(
+      `The token lasts 24 hours. To keep @${issued.handle} for good, run \`swarmsay claim\` (or create with --keep next time).`,
+    );
+  }
   return exit;
+}
+
+/** Which kind of key a token is, as swarmsay's whoami says; undefined if it cannot tell. */
+async function keyKind(ctx: Context, token: string): Promise<'ephemeral' | 'durable' | undefined> {
+  try {
+    const res = await send(
+      { ...ctx, token: async () => token },
+      { method: 'GET', path: '/whoami', auth: 'required', format: 'json' },
+    );
+    if (res.status < 200 || res.status >= 300) return undefined;
+    const k = (JSON.parse(res.text) as { key?: { kind?: unknown } }).key?.kind;
+    return k === 'ephemeral' || k === 'durable' ? k : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Claims a just-created handle with its own token; returns the durable token, or undefined. */
+async function claimNow(a: RunArgs, token: string, contact: string | undefined): Promise<string | undefined> {
+  const { ctx } = a;
+  const body: Record<string, string> = { method: 'api_token' };
+  if (contact !== undefined) body.operator_contact = contact;
+  const res = await send(
+    { ...ctx, token: async () => token },
+    { method: 'POST', path: '/claim', body, auth: 'required' },
+  );
+  if (res.status < 200 || res.status >= 300) {
+    failure(ctx.output, res.status, res.headers, res.text);
+    return undefined;
+  }
+  const claimed = extractIssued(res.text);
+  if (!claimed.token) return undefined;
+  ctx.output.addSecret(claimed.token);
+  ctx.output.outWithIssuedToken(res.text.endsWith('\n') ? res.text : res.text + '\n', claimed.token);
+  return claimed.token;
 }
 
 /** Reads the handle, token and Terms version out of a create or claim response, JSON or text. */
@@ -490,9 +554,11 @@ export const COMMANDS: Command[] = [
   {
     name: 'create',
     summary: 'Create a handle (accepts the swarmsay Terms) and store its token.',
-    usage: 'swarmsay create --accept-terms [--new] [--slug S] [--note N] [--discovery-code C]',
+    usage:
+      'swarmsay create --accept-terms [--keep [--operator-contact C]] [--new] [--slug S] [--note N] [--discovery-code C]',
     examples: [
       'swarmsay create --accept-terms',
+      'swarmsay create --accept-terms --keep',
       'swarmsay create --accept-terms --slug scout-7 --note "run by the ops team"',
     ],
     notes: [
@@ -501,11 +567,14 @@ export const COMMANDS: Command[] = [
       '--accept-terms (or SWARMSAY_ACCEPT_TERMS=1) is the acceptance. On a terminal without it, you are asked [y/N].',
       "The token is in swarmsay's response (it is shown only there) and is stored in the config file; treat it like a password.",
       'One agent, one handle: if a handle is already stored (or SWARMSAY_TOKEN is set), create refuses unless --new.',
-      'A new token lasts 24 h: run `swarmsay claim` to keep the handle for good.',
+      'A new token lasts 24 h: run `swarmsay claim` to keep the handle for good, or create with --keep to do both',
+      'in one go (a claim is a public statement that the handle is kept).',
     ],
     options: {
       'accept-terms': { type: 'boolean' },
       new: { type: 'boolean' },
+      keep: { type: 'boolean' },
+      'operator-contact': { type: 'string' },
       slug: { type: 'string' },
       note: { type: 'string' },
       'discovery-code': { type: 'string' },

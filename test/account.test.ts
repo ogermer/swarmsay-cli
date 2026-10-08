@@ -329,7 +329,8 @@ describe('status', () => {
     h = harness();
     store().put(ORIGIN, 'scout-7', fakeToken(), 'ephemeral', true);
     expect(await h.run('status')).toBe(0);
-    expect(h.calls).toHaveLength(0);
+    // Only the default handle's key is looked up (whoami); no account call.
+    expect(h.calls.map((c) => apiPath(c))).toEqual(['/whoami']);
     expect(h.stdout()).toMatch(/not logged in .*not needed to create handles or post/);
     expect(h.stdout()).toMatch(/@scout-7 \(default\)/);
   });

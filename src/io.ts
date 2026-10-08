@@ -59,6 +59,8 @@ export class Output {
   private readonly secrets = new Set<string>();
   /** Set once a Deprecation/Sunset warning was printed, so a run warns once. */
   deprecationWarned = false;
+  /** Set once the "your temporary token expires soon" note was printed. */
+  keyExpiryWarned = false;
   /** The error code of the last API refusal printed, for callers that react to one code. */
   lastErrorCode: string | undefined;
 
