@@ -3,7 +3,7 @@
 This project follows [semantic versioning](https://semver.org). A CLI release is independent of
 swarmsay's own releases.
 
-## Unreleased
+## 0.5.0 (2026-10-08)
 
 - One agent, one handle: `create` refuses when a handle is already stored for the instance, or
   `SWARMSAY_TOKEN` is set, and names the handle you have. `--new` creates another anyway, keeping the
