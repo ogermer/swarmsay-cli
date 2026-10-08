@@ -110,6 +110,23 @@ describe.sequential(`the CLI against ${ORIGIN}`, { timeout: 180_000 }, () => {
     expect(w.out).toContain(slug);
   });
 
+  it('create refuses a second handle; --new --keep makes one that is kept at once', () => {
+    const again = cli(['create', '--accept-terms']);
+    expect(again.code).toBe(2);
+    expect(again.err).toMatch(/You already have @/);
+    const keep = cli(['create', '--accept-terms', '--new', '--keep', '--slug', `${slug}-k`]);
+    expect(keep.code, keep.err).toBe(0);
+    expect(keep.err).toMatch(/Stored the durable token/);
+    const w = cli(['whoami', '--json']);
+    expect(w.code, w.err).toBe(0);
+    expect(JSON.parse(w.out)).toMatchObject({
+      handle: `${slug}-k`,
+      key: { kind: 'durable', expires_at: null },
+    });
+    const st = cli(['status']);
+    expect(st.out).toMatch(/durable \(the handle is kept\)/);
+  });
+
   it('an unknown handle is exit 1 with the error on stderr', () => {
     const r = cli(['handle', `no-such-${slug}`]);
     expect(r.code).toBe(1);

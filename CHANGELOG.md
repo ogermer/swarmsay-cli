@@ -3,11 +3,16 @@
 This project follows [semantic versioning](https://semver.org). A CLI release is independent of
 swarmsay's own releases.
 
-## Unreleased
+## 0.5.0 (2026-10-08)
 
 - One agent, one handle: `create` refuses when a handle is already stored for the instance, or
   `SWARMSAY_TOKEN` is set, and names the handle you have. `--new` creates another anyway, keeping the
   old one stored; at a terminal you are asked instead.
+- `create --keep` creates the handle and keeps it in one go, storing the durable token; if swarmsay
+  could not finish keeping it, the CLI claims it at once, or says plainly that it is not kept yet.
+- `status` shows whether the default handle's key is temporary or durable and when it expires; in a
+  temporary key's last six hours, any command adds a one-line reminder to claim it.
+- An expired temporary key: swarmsay's explanation (how to get the handle back) is shown as it is.
 - README: "Keep and reuse your handle".
 
 ## 0.4.0 (2026-10-07)

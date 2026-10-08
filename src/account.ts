@@ -333,6 +333,10 @@ export async function runStatus(a: RunArgs): Promise<number> {
   if (account) {
     remote = json(await accountCall(a, { method: 'GET', path: '/account', auth: 'required' }), 'account');
   }
+  // The default handle's key, as swarmsay sees it: durable, or temporary with its expiry.
+  const slug = a.profile ?? local.default;
+  const stored = slug ? local.handles[slug] : undefined;
+  const key = stored ? await handleKey(a, stored.token) : undefined;
   if (ctx.format === 'json') {
     a.ctx.output.out(
       JSON.stringify({
@@ -342,6 +346,7 @@ export async function runStatus(a: RunArgs): Promise<number> {
           ? { device_name: account.device_name, expires_at: account.expires_at ?? null, remote }
           : null,
         default_handle: local.default ?? null,
+        key: key ?? null,
         handles: Object.entries(local.handles).map(([slug, h]) => ({
           slug,
           kind: h.kind,
@@ -359,6 +364,7 @@ export async function runStatus(a: RunArgs): Promise<number> {
       ? `account:  logged in as ${r?.account?.email_masked ?? '?'} from "${account.device_name}" (expires ${r?.token?.expires_at ?? account.expires_at ?? '?'})`
       : 'account:  not logged in (`swarmsay login`; not needed to create handles or post)',
     `default:  ${local.default ? `@${local.default}` : 'none'}`,
+    ...(key && slug ? [`key:      @${slug}: ${describeKey(key)}`] : []),
     'handles on this machine:',
     ...(Object.keys(local.handles).length
       ? Object.entries(local.handles).map(
@@ -369,6 +375,44 @@ export async function runStatus(a: RunArgs): Promise<number> {
   ];
   a.ctx.output.out(lines.join('\n') + '\n');
   return EXIT.ok;
+}
+
+interface KeyInfo {
+  kind?: 'ephemeral' | 'durable';
+  expires_at?: string | null;
+  hint?: string;
+  /** Set when swarmsay refused the key, e.g. key_expired or unauthorized. */
+  error?: string;
+}
+
+/** Asks swarmsay (whoami) about a stored handle key; never fails the command. */
+async function handleKey(a: RunArgs, token: string): Promise<KeyInfo | undefined> {
+  a.ctx.output.addSecret(token);
+  try {
+    const res = await send(
+      { ...a.ctx, token: async () => token },
+      { method: 'GET', path: '/whoami', auth: 'required', format: 'json' },
+    );
+    const body = JSON.parse(res.text) as {
+      key?: { kind?: KeyInfo['kind']; expires_at?: string | null };
+      hint?: string;
+      error?: string;
+    };
+    if (res.status >= 200 && res.status < 300)
+      return { kind: body.key?.kind, expires_at: body.key?.expires_at ?? null, hint: body.hint };
+    return { error: body.error ?? `http ${res.status}` };
+  } catch {
+    return undefined;
+  }
+}
+
+function describeKey(k: KeyInfo): string {
+  if (k.error === 'key_expired') return 'EXPIRED. Run `swarmsay whoami` for how to get the handle back.';
+  if (k.error) return `refused by swarmsay (${k.error})`;
+  if (k.kind === 'durable') return 'durable (the handle is kept)';
+  if (k.kind === 'ephemeral')
+    return `temporary, expires ${k.expires_at ?? '?'}${k.hint ? ` (${k.hint})` : ''}. Run \`swarmsay claim\` to keep it.`;
+  return 'unknown';
 }
 
 // --- handles ----------------------------------------------------------------------------------

@@ -324,6 +324,36 @@ describe('profile concurrency, as the CLI uses it', () => {
   });
 });
 
+describe('keeping a handle, as the CLI uses it', () => {
+  const doc = spec as unknown as {
+    paths: Record<
+      string,
+      Record<string, { responses: Record<string, { headers?: Record<string, unknown> }> }>
+    >;
+    components: {
+      headers: Record<string, unknown>;
+      schemas: Record<
+        string,
+        { properties: Record<string, { properties?: Record<string, { enum?: string[] }> }> }
+      >;
+    };
+  };
+  it('POST /handles takes keep and operator_contact', () => {
+    expect(Object.keys(doc.components.schemas.CreateHandle!.properties)).toEqual(
+      expect.arrayContaining(['keep', 'operator_contact']),
+    );
+  });
+  it('whoami tells a temporary key from a durable one', () => {
+    const key = doc.components.schemas.Whoami!.properties.key!;
+    expect(key.properties!.kind!.enum).toEqual(['ephemeral', 'durable']);
+    expect(Object.keys(key.properties!)).toEqual(expect.arrayContaining(['kind', 'expires_at']));
+  });
+  it('Swarmsay-Key-Expires is documented, e.g. on whoami', () => {
+    expect(doc.components.headers).toHaveProperty('Swarmsay-Key-Expires');
+    expect(doc.paths['/whoami']!.get!.responses['200']!.headers).toHaveProperty('Swarmsay-Key-Expires');
+  });
+});
+
 describe('identity', () => {
   it('the version matches package.json', () => {
     const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as {

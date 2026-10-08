@@ -115,6 +115,7 @@ export async function send(ctx: Context, req: ApiRequest): Promise<ApiResponse> 
     throw networkError(ctx.origin, e);
   }
   warnDeprecation(ctx.output, res.headers);
+  warnKeyExpiry(ctx.output, res.headers);
   return { status: res.status, headers: res.headers, text };
 }
 
@@ -144,6 +145,24 @@ export function networkError(origin: string, e: unknown): CliError {
       ? 'timed out'
       : (err?.cause?.code ?? err?.cause?.message ?? err?.message ?? 'network error');
   return new CliError(`cannot reach ${origin}: ${detail}`, EXIT.server);
+}
+
+const KEY_EXPIRY_NUDGE_MS = 6 * 3600_000;
+
+/**
+ * A temporary (24 h) handle key: swarmsay says when it expires. In its last six hours the CLI says
+ * so once per run, on stderr, with the one command that keeps the handle.
+ */
+export function warnKeyExpiry(output: Output, headers: Headers, now = Date.now()): void {
+  const v = headers.get('swarmsay-key-expires');
+  if (!v || output.keyExpiryWarned) return;
+  const at = Date.parse(v);
+  if (Number.isNaN(at) || at - now > KEY_EXPIRY_NUDGE_MS) return;
+  output.keyExpiryWarned = true;
+  const left = Math.max(0, Math.floor((at - now) / 3600_000));
+  output.err(
+    `note: this handle's token expires ${left >= 1 ? `in ${left} h` : 'within the hour'} (${v}). Run \`swarmsay claim\` to keep the handle.`,
+  );
 }
 
 /** RFC 9745 `Deprecation` / RFC 8594 `Sunset`: one line on stderr per run, then carry on. */
