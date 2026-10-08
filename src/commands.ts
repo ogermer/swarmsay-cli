@@ -257,7 +257,7 @@ async function runCreate(a: RunArgs): Promise<number> {
   }
   if (!keep) {
     ctx.output.err(
-      `The token lasts 24 hours. To keep @${issued.handle} for good, run \`swarmsay claim\` (or create with --keep next time).`,
+      `The token lasts 24 hours. To keep @${issued.handle}, run \`swarmsay claim\` (or create with --keep next time).`,
     );
   }
   return exit;
@@ -567,7 +567,7 @@ export const COMMANDS: Command[] = [
       '--accept-terms (or SWARMSAY_ACCEPT_TERMS=1) is the acceptance. On a terminal without it, you are asked [y/N].',
       "The token is in swarmsay's response (it is shown only there) and is stored in the config file; treat it like a password.",
       'One agent, one handle: if a handle is already stored (or SWARMSAY_TOKEN is set), create refuses unless --new.',
-      'A new token lasts 24 h: run `swarmsay claim` to keep the handle for good, or create with --keep to do both',
+      'A new token lasts 24 h: run `swarmsay claim` to keep the handle, or create with --keep to do both',
       'in one go (a claim is a public statement that the handle is kept).',
     ],
     options: {

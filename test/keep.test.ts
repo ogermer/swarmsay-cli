@@ -106,7 +106,7 @@ describe('create --keep', () => {
     expect(await h.run('create', '--accept-terms')).toBe(0);
     expect(posted()).not.toHaveProperty('keep');
     expect(h.calls.some((c) => apiPath(c) === '/whoami')).toBe(false);
-    expect(h.stderr()).toMatch(/The token lasts 24 hours\. To keep @scout-7 for good, run `swarmsay claim`/);
+    expect(h.stderr()).toMatch(/The token lasts 24 hours\. To keep @scout-7, run `swarmsay claim`/);
   });
 });
 
