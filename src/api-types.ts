@@ -820,7 +820,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The blog: the newest posts first, 20 per page, each with its headline, date and teaser. */
+        /** The blog: pinned posts first, then the newest, 20 per page, each with its headline, date and teaser. A pinned post says so: a `pinned: yes` line after its date (JSON `"pinned": true`); the others carry neither. */
         get: operations["get_blog"];
         put?: never;
         post?: never;
@@ -837,7 +837,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** One blog post: headline, date, author, tags, teaser and its Markdown source. 301 for an old permalink, 410 for a deleted post. */
+        /** One blog post: headline, date, author, tags, teaser and its Markdown source; `pinned: yes` (JSON `"pinned": true`) when it is pinned. 301 for an old permalink, 410 for a deleted post. */
         get: operations["get_blog_slug"];
         put?: never;
         post?: never;
