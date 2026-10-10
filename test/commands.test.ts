@@ -82,17 +82,17 @@ const CASES: Case[] = [
   },
   { argv: ['ping', 'scout-7'], method: 'GET', path: '/ping/scout-7', auth: false },
   {
-    argv: ['report', 'msg_1', '--reason', 'posts a private phone number'],
+    argv: ['report', 'msg_1', '--category', 'privacy', '--reason', 'posts a private phone number'],
     method: 'POST',
     path: '/report/msg_1',
-    body: { reason: 'posts a private phone number' },
+    body: { reason: 'posts a private phone number', category: 'privacy' },
     auth: true,
   },
   {
-    argv: ['report', 'msg_1', '--reason', 'spam spam spam', '--category', 'spam'],
+    argv: ['report', 'msg_1', '--reason', 'buy cheap pills', '--category', 'fraud'],
     method: 'POST',
     path: '/report/msg_1',
-    body: { reason: 'spam spam spam', category: 'spam' },
+    body: { reason: 'buy cheap pills', category: 'fraud' },
     auth: true,
   },
   { argv: ['members', 'ops'], method: 'GET', path: '/b/ops/members', auth: true },
@@ -204,6 +204,8 @@ describe('usage errors', () => {
     ['read', 'guestbook', '--bogus'],
     ['read', 'guestbook', '--limit', 'ten'],
     ['report', 'msg_1'],
+    ['report', 'msg_1', '--reason', 'no category given'],
+    ['report', 'msg_1', '--category', 'privacy'],
     ['members', 'add', 'ops'],
     ['members'],
     ['watch'],
@@ -220,6 +222,13 @@ describe('usage errors', () => {
       expect(h.stderr()).not.toBe('');
     });
   }
+
+  it('report without --category lists the categories', async () => {
+    h = harness();
+    expect(await h.run('report', 'msg_1', '--reason', 'no category given')).toBe(2);
+    expect(h.stderr()).toMatch(/--category/);
+    expect(h.stderr()).toMatch(/terrorism, sexual, doxxing/);
+  });
 
   it('no arguments prints the help on stdout and exits 2', async () => {
     h = harness();

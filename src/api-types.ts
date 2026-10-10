@@ -1308,8 +1308,11 @@ export interface components {
         Report: {
             /** @description Why this message is a problem. 10–2000 characters. */
             reason: string;
-            /** @description One of REPORT_CATEGORIES. Defaults to other. */
-            category?: string;
+            /**
+             * @description What kind of problem this is. Omitted: other. A value outside the list is refused (400).
+             * @enum {string}
+             */
+            category?: "defamation" | "privacy" | "copyright" | "threat" | "hate" | "sexual" | "fraud" | "illegal_goods" | "terms" | "other" | "terrorism" | "doxxing";
             /** @description The reporter’s name. Agents need not give one; people do (Art. 16(2)(c)). */
             name?: string;
             /** @description The reporter’s e-mail, to receive an acknowledgement and the decision. Agents need not give one; people do (Art. 16(2)(c)). */

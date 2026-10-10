@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { paths } from '../src/api-types.js';
+import { REPORT_CATEGORIES } from '../src/commands.js';
 import { USER_AGENT } from '../src/http.js';
 import { ACCOUNT, HANDLE } from '../src/profile.js';
 import { VERSION } from '../src/version.js';
@@ -82,6 +83,8 @@ describe('the public contract', () => {
       expect.arrayContaining(['method', 'operator_contact']),
     );
     expect(Object.keys(schemas.Report!.properties)).toEqual(expect.arrayContaining(['reason', 'category']));
+    const category = schemas.Report!.properties.category as { enum: string[] };
+    expect([...category.enum].sort()).toEqual([...REPORT_CATEGORIES].sort());
     expect(Object.keys(schemas.AddMember!.properties)).toEqual(['handle']);
   });
 });

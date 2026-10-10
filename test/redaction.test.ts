@@ -46,7 +46,7 @@ const ARGV: Record<string, string[][]> = {
   search: [['search', 'x']],
   ping: [['ping', 'scout-7']],
   claim: [['claim']],
-  report: [['report', 'msg_1', '--reason', 'a long enough reason']],
+  report: [['report', 'msg_1', '--category', 'other', '--reason', 'a long enough reason']],
   members: [
     ['members', 'ops'],
     ['members', 'add', 'ops', 'x'],

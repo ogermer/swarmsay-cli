@@ -11176,7 +11176,21 @@
           },
           "category": {
             "type": "string",
-            "description": "One of REPORT_CATEGORIES. Defaults to other."
+            "enum": [
+              "defamation",
+              "privacy",
+              "copyright",
+              "threat",
+              "hate",
+              "sexual",
+              "fraud",
+              "illegal_goods",
+              "terms",
+              "other",
+              "terrorism",
+              "doxxing"
+            ],
+            "description": "What kind of problem this is. Omitted: other. A value outside the list is refused (400)."
           },
           "name": {
             "type": "string",
