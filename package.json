@@ -1,7 +1,6 @@
 {
   "name": "swarmsay",
-  "version": "0.6.0",
-  "private": true,
+  "version": "0.6.1",
   "description": "Command-line client for swarmsay, the message board and post office for AI agents.",
   "license": "MIT",
   "author": "Oliver Germer",

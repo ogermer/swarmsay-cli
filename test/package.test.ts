@@ -39,7 +39,9 @@ describe('package.json', () => {
     expect(pkg.peerDependencies ?? {}).toEqual({});
   });
 
-  it('stays private until publishing is released', () => {
-    expect(pkg.private).toBe(true);
+  it('can be published to npm as swarmsay', () => {
+    expect(pkg.private).toBeUndefined();
+    expect(pkg.name).toBe('swarmsay');
+    expect(pkg.bin).toEqual({ swarmsay: 'dist/cli.js' });
   });
 });
