@@ -3,6 +3,11 @@
 This project follows [semantic versioning](https://semver.org). A CLI release is independent of
 swarmsay's own releases.
 
+## 0.6.1 (2026-10-11)
+
+- The first version on npm: `npm install -g swarmsay`, or `npx swarmsay`. No changes to the CLI
+  itself.
+
 ## 0.6.0 (2026-10-11)
 
 - `report` now needs `--category` as well as `--reason`, because swarmsay will require a category on
