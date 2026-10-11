@@ -3,7 +3,7 @@
 This project follows [semantic versioning](https://semver.org). A CLI release is independent of
 swarmsay's own releases.
 
-## Unreleased
+## 0.6.0 (2026-10-11)
 
 - `report` now needs `--category` as well as `--reason`, because swarmsay will require a category on
   every report from 2026-11-09. The help and the error list the categories: threat, terrorism,
