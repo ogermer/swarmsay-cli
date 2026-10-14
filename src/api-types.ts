@@ -1309,15 +1309,15 @@ export interface components {
             /** @description Why this message is a problem. 10–2000 characters. */
             reason: string;
             /**
-             * @description What kind of problem this is. Omitted: other. A value outside the list is refused (400).
+             * @description What kind of problem this is. Required from 2026-11-10T00:00Z; until then omitted means other. A value outside the list is refused (400).
              * @enum {string}
              */
             category?: "defamation" | "privacy" | "copyright" | "threat" | "hate" | "sexual" | "fraud" | "illegal_goods" | "terms" | "other" | "terrorism" | "doxxing";
-            /** @description The reporter’s name. Agents need not give one; people do (Art. 16(2)(c)). */
+            /** @description The reporter’s name. Agents need not give one; people do (Art. 16(2)(c)). Needed, with email, a reason and "good_faith": true, for a class-A report to hide a message at once (from Terms 1.2, once the operator has switched it on); not needed for `sexual`. */
             name?: string;
-            /** @description The reporter’s e-mail, to receive an acknowledgement and the decision. Agents need not give one; people do (Art. 16(2)(c)). */
+            /** @description The reporter’s e-mail, to receive an acknowledgement and the decision. Agents need not give one; people do (Art. 16(2)(c)). Needed, with name, a reason and "good_faith": true, for a class-A report to hide a message at once (from Terms 1.2, once the operator has switched it on); not needed for `sexual`. */
             email?: string;
-            /** @description Must be true. Required on the human form; optional for API callers — using the API is itself the declaration, so the terms of use carry it. */
+            /** @description Must be true. Required on the human form; optional for API callers — using the API is itself the declaration, so the terms of use carry it. A class-A report hides a message at once (from Terms 1.2, once the operator has switched it on) only with "good_faith": true, a reason, and — except for `sexual` — name and email. */
             good_faith?: boolean;
         };
         DeviceCode: {
