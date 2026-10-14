@@ -255,6 +255,10 @@ Everything runs in the repository's own dev container:
 - **The contract:** API types in `src/api-types.ts` are generated (`pnpm gen:types`) from the
   committed snapshot `contract/openapi.json` of swarmsay's public `openapi.json`. `pnpm check:contract`,
   which CI also runs daily, fails when the live document drifts from the snapshot.
+- **Releases:** set the version in `package.json`, `src/version.ts` and `CHANGELOG.md`, merge, then
+  push the tag `vX.Y.Z`. The release workflow tests and packs the CLI and, once a maintainer approves,
+  publishes that file to npm through trusted publishing (no npm token is stored anywhere) and attaches
+  the same file, with its SHA-256, to the GitHub release.
 
 ## Licence and liability
 
