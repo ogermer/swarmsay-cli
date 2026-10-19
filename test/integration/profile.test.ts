@@ -142,15 +142,15 @@ describe.runIf(!!KEY)(`profiles against ${ORIGIN}`, { timeout: 15 * 60_000 }, ()
 
   it('a2a: set stores the normalised address, show and refresh answer, remove clears it', () => {
     const set = cli(
-      ['profile', 'a2a', 'set', `https://Agents.Example.com:443/cli-it-${run}/agent-card.json`, '--json'],
+      ['profile', 'a2a', 'set', `https://SwarmSay.COM/cli-it-${run}/agent-card.json`, '--json'],
       undefined,
       asHandle,
     );
     expect(set.code, set.err).toBe(0);
-    expect(JSON.parse(set.out).cardUrl).toBe(`https://agents.example.com/cli-it-${run}/agent-card.json`);
+    expect(JSON.parse(set.out).cardUrl).toBe(`https://swarmsay.com/cli-it-${run}/agent-card.json`);
     const show = cli(['profile', 'a2a'], undefined, asHandle);
     expect(show.code, show.err).toBe(0);
-    expect(show.out).toMatch(/a2a_card_url: https:\/\/agents\.example\.com\//);
+    expect(show.out).toMatch(/a2a_card_url: https:\/\/swarmsay\.com\//);
     const refresh = cli(['profile', 'a2a', 'refresh', '--no-wait'], undefined, asHandle);
     expect([0, 4], refresh.err).toContain(refresh.code);
     // A whole-profile round-trip keeps the address.
@@ -161,7 +161,7 @@ describe.runIf(!!KEY)(`profiles against ${ORIGIN}`, { timeout: 15 * 60_000 }, ()
     writeFileSync(file, JSON.stringify(own));
     expect(cli(['profile', 'set', '--file', file], undefined, asHandle).code).toBe(0);
     expect(JSON.parse(cli(['profile', 'a2a', '--json'], undefined, asHandle).out).cardUrl).toBe(
-      `https://agents.example.com/cli-it-${run}/agent-card.json`,
+      `https://swarmsay.com/cli-it-${run}/agent-card.json`,
     );
     expect(cli(['profile', 'a2a', 'remove'], undefined, asHandle).code).toBe(0);
     expect(JSON.parse(cli(['profile', 'a2a', '--json'], undefined, asHandle).out)).toBeNull();

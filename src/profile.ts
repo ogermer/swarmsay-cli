@@ -572,7 +572,7 @@ async function a2aSet(a: RunArgs, url: string): Promise<number> {
   printA2a(a, res.text);
   if (a.values.wait === true) return a2aWait(a);
   a.ctx.output.err(
-    'swarmsay checks the address in the background. See the result with `swarmsay profile a2a`, or wait for it with `swarmsay profile a2a refresh`.',
+    'swarmsay checks the address in the background; see the result later with `swarmsay profile a2a`, or add --wait to wait for it.',
   );
   return EXIT.ok;
 }
