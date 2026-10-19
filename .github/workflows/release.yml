@@ -1,0 +1,132 @@
+# Publishes a release when a version tag (v1.2.3) is pushed: tests and packs the CLI, waits for approval
+# in the `npm` environment, publishes that exact file to npm (trusted publishing: no npm token exists
+# anywhere, and npm records where the package was built), then creates the GitHub release with the same
+# file and its SHA-256. Actions are pinned to commit SHAs because the publish job can sign in to npm.
+name: release
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: The tag matches package.json, src/version.ts and the changelog
+        id: version
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          test "$(node -p 'require("./package.json").version')" = "$version"
+          grep -q "'$version';" src/version.ts
+          grep -q "^## $version " CHANGELOG.md
+          test "$(node -p 'require("./package.json").private')" = undefined
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: This version is not on npm yet
+        run: |
+          if npm view "swarmsay@${{ steps.version.outputs.version }}" version 2>/dev/null | grep -q .; then
+            echo "swarmsay@${{ steps.version.outputs.version }} is already on npm" >&2
+            exit 1
+          fi
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm format:check
+      - run: pnpm test
+      - run: pnpm build
+      - name: Generated types match the committed contract snapshot
+        run: |
+          pnpm gen:types
+          git diff --exit-code -- src/api-types.ts
+      - name: Pack
+        run: |
+          mkdir -p out
+          pnpm pack --pack-destination out
+          file="swarmsay-${{ steps.version.outputs.version }}.tgz"
+          tar -tzf "out/$file" | sort | tee out/files.txt
+          ! grep -vE '^package/(dist/cli\.js|README\.md|LICENSE|package\.json)$' out/files.txt
+          rm out/files.txt
+          (cd out && sha256sum "$file" | tee "$file.sha256")
+      - name: The packed CLI installs and reports its version
+        run: |
+          prefix="$(mktemp -d)"
+          npm install -g --prefix "$prefix" "./out/swarmsay-${{ steps.version.outputs.version }}.tgz"
+          test "$("$prefix/bin/swarmsay" --version)" = "${{ steps.version.outputs.version }}"
+      - name: Release notes from the changelog
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          sha="$(cut -d' ' -f1 "out/swarmsay-$version.tgz.sha256")"
+          {
+            echo "swarmsay-cli $version, on npm as [\`swarmsay\`](https://www.npmjs.com/package/swarmsay) (Node 20 or later, no other dependencies):"
+            echo
+            echo '```sh'
+            echo 'npm install -g swarmsay'
+            echo '```'
+            echo
+            echo 'Or run it without installing: `npx swarmsay --help`. To update: `npm install -g swarmsay@latest`.'
+            echo
+            echo "## What's new"
+            echo
+            awk -v v="$version" '$0 ~ "^## "v" " {on=1; next} on && /^## / {exit} on' CHANGELOG.md
+            echo
+            echo "Prefer a manual install? The file attached here is the same package as on npm. Download it, check its SHA-256, then install it:"
+            echo
+            echo '```sh'
+            echo "curl -fLO https://github.com/ogermer/swarmsay-cli/releases/download/v$version/swarmsay-$version.tgz"
+            echo "shasum -a 256 swarmsay-$version.tgz"
+            echo "npm install -g ./swarmsay-$version.tgz"
+            echo '```'
+            echo
+            echo "SHA-256 of swarmsay-$version.tgz: \`$sha\`"
+          } > out/notes.md
+          cat out/notes.md
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release
+          path: out/
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    # The `npm` environment asks its reviewer to approve before this job starts.
+    environment: npm
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release
+          path: out
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - name: npm new enough for trusted publishing
+        run: npm install -g npm@11
+      - name: The file is the one that was built and checked
+        run: cd out && sha256sum -c "swarmsay-${{ needs.build.outputs.version }}.tgz.sha256"
+      - name: Publish to npm
+        run: npm publish "./out/swarmsay-${{ needs.build.outputs.version }}.tgz" --access public
+      - name: Create the GitHub release with the same file
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${{ needs.build.outputs.version }}"
+          gh release create "v$version" "out/swarmsay-$version.tgz" \
+            --repo "$GITHUB_REPOSITORY" --verify-tag \
+            --title "swarmsay-cli $version" --notes-file out/notes.md
