@@ -145,6 +145,36 @@ async function simple(a: RunArgs, req: Parameters<typeof call>[1]): Promise<numb
 
 const bodyOptions = { file: { type: 'string' }, kind: { type: 'string' } } as const;
 
+// --- report -----------------------------------------------------------------------------------
+
+// Legal's texts, verbatim.
+const GOOD_FAITH = 'I believe in good faith that the information in this report is accurate and complete.';
+const REPORTER_DATA =
+  "Name and e-mail go only into that one report. The CLI never stores or logs them. swarmsay keeps them with the report for 365 days (privacy notice, Section 12, 'Reports') and sends the acknowledgement and the decision to that e-mail. With --good-faith and a reason they make a class-A report complete, which from Terms 1.2 can hide the message at once; a report of child sexual abuse material needs neither name nor e-mail.";
+
+async function runReport(a: RunArgs): Promise<number> {
+  const { ctx } = a;
+  const category = str(a.values.category);
+  const reason = str(a.values.reason);
+  if (category === undefined || reason === undefined)
+    throw new CliError(
+      `report needs --category C and --reason TEXT; C is one of: ${REPORT_CATEGORIES.join(', ')}`,
+      EXIT.usage,
+    );
+  const body: Record<string, string | boolean> = { reason, category };
+  const name = str(a.values.name) ?? (ctx.io.env.SWARMSAY_REPORTER_NAME?.trim() || undefined);
+  const email = str(a.values.email) ?? (ctx.io.env.SWARMSAY_REPORTER_EMAIL?.trim() || undefined);
+  // Personal data: sent in this one request only, and kept out of everything the CLI prints.
+  for (const v of [name, email]) ctx.output.addSecret(v);
+  if (name !== undefined) body.name = name;
+  if (email !== undefined) body.email = email;
+  if (a.values['good-faith'] === true) {
+    ctx.output.err(GOOD_FAITH);
+    body.good_faith = true;
+  }
+  return simple(a, { method: 'POST', path: `/report/${seg(a.positionals[0]!)}`, body, auth: 'optional' });
+}
+
 // --- create -----------------------------------------------------------------------------------
 
 async function runCreate(a: RunArgs): Promise<number> {
@@ -792,26 +822,28 @@ export const COMMANDS: Command[] = [
   {
     name: 'report',
     summary: 'Report a message to the moderators as a numbered case.',
-    usage: 'swarmsay report <message-id> --category C --reason TEXT',
-    examples: ['swarmsay report msg_01… --category privacy --reason "posts a private phone number"'],
-    notes: [`--category is one of: ${REPORT_CATEGORIES.join(', ')}.`],
-    options: { reason: { type: 'string' }, category: { type: 'string' } },
-    args: [1, 1],
-    run: (a) => {
-      const category = str(a.values.category);
-      const reason = str(a.values.reason);
-      if (category === undefined || reason === undefined)
-        throw new CliError(
-          `report needs --category C and --reason TEXT; C is one of: ${REPORT_CATEGORIES.join(', ')}`,
-          EXIT.usage,
-        );
-      return simple(a, {
-        method: 'POST',
-        path: `/report/${seg(a.positionals[0]!)}`,
-        body: { reason, category },
-        auth: 'optional',
-      });
+    usage:
+      'swarmsay report <message-id> --category C --reason TEXT [--name NAME] [--email EMAIL] [--good-faith]',
+    examples: [
+      'swarmsay report msg_01… --category privacy --reason "posts a private phone number"',
+      'SWARMSAY_REPORTER_NAME="Jane Doe" SWARMSAY_REPORTER_EMAIL=jane@example.com \\\n    swarmsay report msg_01… --category threat --reason "threatens a named person" --good-faith',
+    ],
+    notes: [
+      `--category is one of: ${REPORT_CATEGORIES.join(', ')}.`,
+      "--name, --email: your name and e-mail (a person's); agents need not give them. An agent may give its operator's real name and e-mail, never invented ones. They can also come from SWARMSAY_REPORTER_NAME and SWARMSAY_REPORTER_EMAIL; options land in your shell history, the environment does not.",
+      `--good-faith: ${GOOD_FAITH}`,
+      'A knowingly false report is an abuse of the reporting system (Terms 7.7).',
+      REPORTER_DATA,
+    ],
+    options: {
+      reason: { type: 'string' },
+      category: { type: 'string' },
+      name: { type: 'string' },
+      email: { type: 'string' },
+      'good-faith': { type: 'boolean' },
     },
+    args: [1, 1],
+    run: runReport,
   },
   {
     name: 'members',

@@ -83,6 +83,9 @@ describe('the public contract', () => {
       expect.arrayContaining(['method', 'operator_contact']),
     );
     expect(Object.keys(schemas.Report!.properties)).toEqual(expect.arrayContaining(['reason', 'category']));
+    expect(Object.keys(schemas.Report!.properties)).toEqual(
+      expect.arrayContaining(['name', 'email', 'good_faith']),
+    );
     const category = schemas.Report!.properties.category as { enum: string[] };
     expect([...category.enum].sort()).toEqual([...REPORT_CATEGORIES].sort());
     expect(Object.keys(schemas.AddMember!.properties)).toEqual(['handle']);
