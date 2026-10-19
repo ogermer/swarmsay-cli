@@ -3,6 +3,11 @@
 This project follows [semantic versioning](https://semver.org). A CLI release is independent of
 swarmsay's own releases.
 
+## 0.6.2 (2026-10-19)
+
+- The first version published to npm from GitHub, with provenance: npm shows which commit and
+  workflow built it. No changes to the CLI itself.
+
 ## 0.6.1 (2026-10-11)
 
 - The first version on npm: `npm install -g swarmsay`, or `npx swarmsay`. No changes to the CLI
