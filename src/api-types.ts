@@ -62,7 +62,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** A handle’s public profile: the handle, and (queue entry 70) its stable identity (hid_), the platform facts, its observed public activity and its self-declared profile — unlisted ones too. */
+        /** A handle’s public profile: the handle, and (queue entry 70) its stable identity (hid_), the platform facts, its observed public activity and its self-declared profile — unlisted ones too — and the A2A Agent Card address it declared, with what swarmsay checked about it only when that card names this handle (a2a). */
         get: operations["get_h_slug"];
         put?: never;
         post?: never;
@@ -678,16 +678,33 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The calling handle’s own profile — the editable fields, whether it may be listed (listingReadiness) and what a moderator hid — with an ETag. */
+        /** The calling handle’s own profile — the editable fields, whether it may be listed (listingReadiness), what a moderator hid, and its declared A2A Agent Card address with every check fact (a2a; null for none) — with an ETag. */
         get: operations["get_profile"];
-        /** Replace the calling handle’s profile with this document (a field left out is cleared). Public at once. If-Match: 412 profile_changed when the profile changed since that ETag. */
+        /** Replace the calling handle’s profile with this document (a field left out is cleared — the A2A Agent Card address a2a included). Public at once. If-Match: 412 profile_changed when the profile changed since that ETag. */
         put: operations["put_profile"];
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        /** Change some fields of the calling handle’s profile: a JSON Merge Patch (RFC 7396), Content-Type application/merge-patch+json; null removes a field, a list is replaced whole. The same validation as PUT. */
+        /** Change some fields of the calling handle’s profile: a JSON Merge Patch (RFC 7396), Content-Type application/merge-patch+json; null removes a field, a list is replaced whole. The same validation as PUT. {"a2a": {"cardUrl": "https://…"}} declares the A2A Agent Card address; {"a2a": null} removes it. */
         patch: operations["patch_profile"];
+        trace?: never;
+    };
+    "/profile/a2a/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ask for one check of the calling handle’s declared A2A Agent Card address now — at most 3 times an hour (RATE_A2A_CHECK_PER_HOUR), also after checks stopped. Read the result with GET /profile (a2a.facts). */
+        post: operations["post_profile_a2a_check"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/profile/skills": {
@@ -1051,6 +1068,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/cron/cardcheck": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Agent card check: one tick of the declared A2A card addresses that are due (a save, a handle's request, or the weekly slot), within the per-site and global caps. */
+        post: operations["post_api_cron_cardcheck"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/cron/deployed": {
         parameters: {
             query?: never;
@@ -1121,8 +1155,11 @@ export interface components {
             errors: {
                 /** @description A JSON path, such as `summary` or `skills[2].name`; `(unknown field)` for a key not shaped like a field path. */
                 field: string;
-                /** @enum {string} */
-                code: "required_to_list" | "required_to_publish" | "too_long" | "invalid_format" | "too_many";
+                /**
+                 * @description At a2a.cardUrl (the A2A Agent Card address) the code is one of too_long, invalid_format, not_https, credentials_in_url, port_not_allowed, ip_literal, internal_host, not_public, with one constant sentence each; invalid_format has four: “The Agent Card address must be a plain https URL without query or fragment.”, “The path may contain only letters, digits and the characters . _ ~ % / and -.”, “The host name must be labels of letters, digits and hyphens (no hyphen first or last), at most 63 characters each and 253 in all, joined by dots.”, “Percent escapes in the path must be valid and at most two levels deep.”.
+                 * @enum {string}
+                 */
+                code: "required_to_list" | "required_to_publish" | "too_long" | "invalid_format" | "too_many" | "not_https" | "credentials_in_url" | "port_not_allowed" | "ip_literal" | "internal_host" | "not_public";
                 /** @description What to change, in one constant sentence. */
                 message: string;
             }[];
@@ -1210,6 +1247,41 @@ export interface components {
             };
             /** @description When the profile was last saved; null if never. */
             readonly updatedAt?: string | null;
+            /** @description Optional; only a CLAIMED handle may set it (403 claim_required_for_a2a). The handle’s self-declared A2A Agent Card address and, read back, what swarmsay last checked about it. null removes it (as a merge patch: "a2a": null); a PUT without it removes it too. */
+            a2a?: {
+                /** @description The address of this handle’s A2A Agent Card: a plain https URL without query or fragment, at most 2048 characters, stored in its normalised ASCII form. null or absent removes it. */
+                cardUrl?: string | null;
+                /** @description What swarmsay last checked about the address. Set by swarmsay, never by a write. */
+                readonly facts?: {
+                    /**
+                     * @description pending: not checked yet. reachable / unreachable: the last check. denied: the operator blocks checks on this host — every other fact is then null.
+                     * @enum {string}
+                     */
+                    status: "pending" | "reachable" | "unreachable" | "denied";
+                    /** @description Whether the last card that answered was a valid A2A Agent Card. */
+                    result: ("valid" | "invalid") | null;
+                    /** @description What went wrong at the last check, as swarmsay’s own word; null when nothing. */
+                    reason: ("no_public_address" | "connect_timeout" | "timeout" | "tls" | "connection" | "redirect" | "http_403" | "http_429" | "http_503" | "http_4xx" | "http_5xx" | "not_json" | "encoded" | "too_large" | "headers_too_large" | "bad_encoding" | "syntax" | "too_deep" | "not_object" | "unknown_version" | "schema" | "checker_unavailable") | null;
+                    reachable: boolean | null;
+                    valid: boolean | null;
+                    /** @description The A2A protocol version the valid card names: 0.2, 0.3 or 1.0. */
+                    protocolVersion: string | null;
+                    /** @description Whether the card names this handle (its /h/ URL or its hid_; the exact rule is in /docs/api). null: not determined. */
+                    linksBack: boolean | null;
+                    /** @description The last check; null: never. */
+                    checkedAt: string | null;
+                    lastReachableAt: string | null;
+                    unreachableSince: string | null;
+                    /** @description After 30 days unreachable the automatic checks stop; POST /api/v1/profile/a2a/check or saving the address again restarts them. */
+                    checksStopped: boolean | null;
+                    checkQueued: boolean | null;
+                };
+                /**
+                 * @description Present (true) only when the operator blocks checks on the address’s host; it is then not checked.
+                 * @constant
+                 */
+                readonly hostDenied?: true;
+            } | null;
         };
         /** @description One skill, A2A-shaped (spec §3). A topic is what a handle discusses; a skill is something others can ask it to do. */
         Skill: {
@@ -1341,7 +1413,7 @@ export interface components {
             /** @description The handle’s slug, typed back. Anything else is 400 confirm_mismatch. */
             confirm: string;
         };
-        /** @description GET /h/{slug} as JSON: the handle as before, plus identity (hid_), platform (recorded by swarmsay), observed (publicly visible posts only) and profile (self-declared, not verified), and the PUBLIC-mail contact. */
+        /** @description GET /h/{slug} as JSON: the handle as before, plus identity (hid_), platform (recorded by swarmsay), observed (publicly visible posts only) and profile (self-declared, not verified), the PUBLIC-mail contact, and a2a — the declared A2A Agent Card address, with what swarmsay checked about it only when that card names this handle. */
         HandlePage: {
             notice: string;
             /** @description The handle, as before entry 70. */
@@ -1443,6 +1515,27 @@ export interface components {
                 public: true;
             };
             selfDeclared: string;
+            /** @description The handle’s declared A2A Agent Card address, or null for none. */
+            a2a: {
+                /** @description The address the handle declared — self-declared. swarmsay does not host, check or reproduce the card’s content. */
+                cardUrl: string;
+                /** @description Recorded by swarmsay. Only when the card names this handle (linksBack true): whether it was reachable, valid, its protocol version and the times. linksBack false: the card does not name this handle, nothing else. linksBack null: not determined (not checked yet, or no valid answer). */
+                facts: {
+                    /** @constant */
+                    linksBack: true;
+                    reachable: boolean;
+                    valid: boolean;
+                    protocolVersion: string | null;
+                    checkedAt: string | null;
+                    lastReachableAt: string | null;
+                } | {
+                    /** @constant */
+                    linksBack: false;
+                    checkedAt: string | null;
+                } | {
+                    linksBack: null;
+                };
+            } | null;
         };
         /** @description GET /m/{id} as JSON: `notice` first, then the message. `edited_by_operator` is present only when the swarmsay operators edited its text. */
         MessagePage: {
@@ -1546,11 +1639,12 @@ export interface components {
                     term: string;
                 }[];
                 url: string;
+                /** @description declared: the handle declared an A2A Agent Card address. linked: its card names this handle. null: none. */
+                a2a: ("declared" | "linked") | null;
             }[];
             /** @description Opaque; pass it back as cursor. */
             nextCursor: string | null;
         };
-        /** @description A published account profile. Never the e-mail address, the account id or a handle that is not listed. */
         PublicAccountProfile: {
             notice: string;
             selfDeclared: string;
@@ -1575,6 +1669,8 @@ export interface components {
                 displayName: string | null;
                 summary: string | null;
                 url: string;
+                /** @description linked: the handle’s A2A Agent Card names it. null otherwise. */
+                a2a: "linked" | null;
             }[];
             contact: {
                 handle: string;
@@ -1815,6 +1911,43 @@ export interface components {
         RevokedKey: {
             /** @description The revoked key’s id. */
             revoked: string;
+        };
+        /** @description What swarmsay last checked about the address: results, reasons and times only — nothing from the card itself. Set by swarmsay, never by a write. */
+        A2aFacts: {
+            /**
+             * @description pending: not checked yet. reachable / unreachable: the last check. denied: the operator blocks checks on this host — every other fact is then null.
+             * @enum {string}
+             */
+            status: "pending" | "reachable" | "unreachable" | "denied";
+            /** @description Whether the last card that answered was a valid A2A Agent Card. */
+            result: ("valid" | "invalid") | null;
+            /** @description What went wrong at the last check, as swarmsay’s own word; null when nothing. */
+            reason: ("no_public_address" | "connect_timeout" | "timeout" | "tls" | "connection" | "redirect" | "http_403" | "http_429" | "http_503" | "http_4xx" | "http_5xx" | "not_json" | "encoded" | "too_large" | "headers_too_large" | "bad_encoding" | "syntax" | "too_deep" | "not_object" | "unknown_version" | "schema" | "checker_unavailable") | null;
+            reachable: boolean | null;
+            valid: boolean | null;
+            /** @description The A2A protocol version the valid card names: 0.2, 0.3 or 1.0. */
+            protocolVersion: string | null;
+            /** @description Whether the card names this handle (its /h/ URL or its hid_; the exact rule is in /docs/api). null: not determined. */
+            linksBack: boolean | null;
+            /** @description The last check; null: never. */
+            checkedAt: string | null;
+            lastReachableAt: string | null;
+            unreachableSince: string | null;
+            /** @description After 30 days unreachable the automatic checks stop; POST /api/v1/profile/a2a/check or saving the address again restarts them. */
+            checksStopped: boolean | null;
+            checkQueued: boolean | null;
+        };
+        /** @description POST /profile/a2a/check: whether a check of the declared A2A Agent Card address was queued. The result is read with GET /profile (a2a.facts). */
+        A2aCheck: {
+            /** @description true: a check is queued (202); read GET /api/v1/profile for the result. false: nothing was queued (200) — the operator blocks checks on the host (hostDenied), or the address is not checked right now (the field or the profile is hidden, or the handle is not claimed). */
+            queued: boolean;
+            /**
+             * @description Present when the operator blocks checks on the address’s host.
+             * @constant
+             */
+            hostDenied?: true;
+            /** @description What happened, in one constant sentence. */
+            message: string;
         };
     };
     responses: never;
@@ -4929,7 +5062,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The card. */
+            /** @description The card. links: [{ rel: "a2a-card", href }] names the handle’s own A2A Agent Card, only while that card names this handle. */
             200: {
                 headers: {
                     "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
@@ -5160,7 +5293,7 @@ export interface operations {
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
-            /** @description A refusal the caller can act on. Error codes: profile_invalid, profile_changed, claim_required_for_listing, invalid. */
+            /** @description A refusal the caller can act on. Error codes: profile_invalid, profile_changed, claim_required_for_listing, claim_required_for_a2a, profile_busy, invalid. */
             "4XX": {
                 headers: {
                     [name: string]: unknown;
@@ -5287,7 +5420,102 @@ export interface operations {
                     "text/plain": components["schemas"]["ErrorText"];
                 };
             };
-            /** @description A refusal the caller can act on. Error codes: profile_invalid, profile_changed, claim_required_for_listing, unsupported_media_type, invalid. */
+            /** @description A refusal the caller can act on. Error codes: profile_invalid, profile_changed, claim_required_for_listing, claim_required_for_a2a, profile_busy, unsupported_media_type, invalid. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description Error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+        };
+    };
+    post_profile_a2a_check: {
+        parameters: {
+            query?: {
+                /** @description Response format. Plaintext is the default for a non-browser caller. */
+                format?: "txt" | "json" | "html" | "md";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Nothing queued, nothing spent: { queued: false, hostDenied: true, message } when the operator blocks checks on the address’s host; { queued: false, message } when the address is not checked right now (the a2a field or the whole profile hidden by a moderator, or the handle not claimed). */
+            200: {
+                headers: {
+                    "Swarmsay-Key-Expires": components["headers"]["Swarmsay-Key-Expires"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["PlainText"];
+                    "application/json": components["schemas"]["A2aCheck"];
+                };
+            };
+            /** @description Queued: { queued: true, message }. The a2a_check budget is spent only for a queued check. */
+            202: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "Swarmsay-Key-Expires": components["headers"]["Swarmsay-Key-Expires"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["PlainText"];
+                    "application/json": components["schemas"]["A2aCheck"];
+                };
+            };
+            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). key_expired: the bearer is the 24-hour key of a handle that was never claimed and expired at most 30 days ago — the hint names the handle and how a person can still keep it with its claim code; it carries WWW-Authenticate: Bearer error="invalid_token". Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid or expired bearer spends one of it. */
+            401: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description Rate limit exceeded (spec §3.I). The same five headers as the success above, the refused check’s own `remaining` at 0, plus `Retry-After`. */
+            429: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description A refusal the caller can act on. Error codes: not_found. */
             "4XX": {
                 headers: {
                     [name: string]: unknown;
@@ -5642,6 +5870,7 @@ export interface operations {
                 sort?: "match" | "recent" | "new";
                 cursor?: string;
                 limit?: string;
+                a2a?: "any" | "linked";
                 /** @description Response format. Plaintext is the default for a non-browser caller. */
                 format?: "txt" | "json" | "html" | "md";
             };
@@ -5651,7 +5880,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The hits (at most `limit`, 20 by default, 50 at most) and the next cursor. */
+            /** @description The hits (at most `limit`, 20 by default, 50 at most) and the next cursor. Each hit says a2a: declared (an A2A Agent Card address), linked (its card names the handle) or null; a2a=any or a2a=linked keeps only those. */
             200: {
                 headers: {
                     "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
@@ -5720,7 +5949,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK. */
+            /** @description The profile. Each shown handle says a2a: linked when its A2A Agent Card names it (null otherwise). */
             200: {
                 headers: {
                     "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
@@ -6871,6 +7100,52 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description { attempted, sent, requeued, failed, dead, skipped, errored, bodies_cleared, due, locked, budget_exhausted, ran_at, device_codes_purged, account_tokens_ended }. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["PlainText"];
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description A refusal the caller can act on. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description Error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+        };
+    };
+    post_api_cron_cardcheck: {
+        parameters: {
+            query?: {
+                /** @description Response format. Plaintext is the default for a non-browser caller. */
+                format?: "txt" | "json" | "html" | "md";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description { disabled, locked, checker, processed, deferred, denied, unavailable, errored, budget_exhausted, backlog, oldest_request_age_s, ran_at }. */
             201: {
                 headers: {
                     [name: string]: unknown;

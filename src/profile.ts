@@ -119,7 +119,25 @@ async function patch(a: RunArgs, kind: ProfileKind, body: Record<string, unknown
 function stripReadOnly(doc: Record<string, unknown>, kind: ProfileKind): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(doc)) if (!kind.readOnly.includes(k)) out[k] = v;
-  return out;
+  return withoutA2aFacts(out);
+}
+
+/**
+ * A handle's A2A Agent Card address comes back with what swarmsay checked about it (a2a.facts), which
+ * only swarmsay sets. A whole-profile write keeps the address and leaves the facts out.
+ */
+function withoutA2aFacts<T>(doc: T): T {
+  if (!doc || typeof doc !== 'object' || Array.isArray(doc)) return doc;
+  const a2a = (doc as Record<string, unknown>).a2a;
+  if (!a2a || typeof a2a !== 'object' || Array.isArray(a2a) || !('facts' in a2a)) return doc;
+  const { facts: _facts, ...rest } = a2a as Record<string, unknown>;
+  return { ...doc, a2a: rest };
+}
+
+/** The A2A Agent Card address a profile document declares, if any. */
+function cardUrl(doc: unknown): string | undefined {
+  const a2a = (doc as { a2a?: { cardUrl?: unknown } } | undefined)?.a2a;
+  return typeof a2a?.cardUrl === 'string' ? a2a.cardUrl : undefined;
 }
 
 // --- edit ------------------------------------------------------------------------------------
@@ -156,7 +174,7 @@ async function edit(a: RunArgs, kind: ProfileKind): Promise<number> {
         if (await again(a)) continue;
         return EXIT.usage;
       }
-      const res = await write(a, kind, 'PUT', body, etag);
+      const res = await write(a, kind, 'PUT', withoutA2aFacts(body), etag);
       if (res.status >= 200 && res.status < 300) {
         print(a, res.text);
         return EXIT.ok;
@@ -209,10 +227,16 @@ async function set(a: RunArgs, kind: ProfileKind, args: string[]): Promise<numbe
         EXIT.usage,
       );
     }
-    const { etag } = await readOwn(a, kind);
+    const { doc, etag } = await readOwn(a, kind);
+    body = withoutA2aFacts(body);
     const res = await write(a, kind, 'PUT', body, etag);
     if (res.status >= 200 && res.status < 300) {
       print(a, res.text);
+      // A whole-profile write without `a2a` removes the A2A Agent Card address; say so.
+      if (cardUrl(doc) !== undefined && body && typeof body === 'object' && !('a2a' in body))
+        a.ctx.output.err(
+          'The A2A Agent Card address was removed, because the file has no "a2a" field. To keep it, include "a2a": {"cardUrl": "…"}.',
+        );
       return EXIT.ok;
     }
     throw failure(a.ctx.output, res.status, res.headers, res.text);

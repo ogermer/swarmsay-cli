@@ -472,3 +472,62 @@ describe('account profile', () => {
     expect(await h.run('account', 'show')).toBe(2);
   });
 });
+
+describe('profile: the A2A Agent Card address survives a whole-profile write', () => {
+  const A2A = {
+    cardUrl: 'https://agents.example.com/.well-known/agent-card.json',
+    facts: {
+      status: 'reachable',
+      reachable: true,
+      valid: true,
+      linksBack: true,
+      checkedAt: '2026-10-19T14:00:00Z',
+    },
+  };
+  const withA2a = (): Reply => ({
+    headers: { etag: ETAG, 'content-type': 'application/json' },
+    body: JSON.stringify({ ...OWN, a2a: A2A }),
+  });
+  const getJson = (req: Recorded): Reply =>
+    req.url.searchParams.get('format') === 'json'
+      ? withA2a()
+      : { headers: { etag: ETAG }, body: 'profile\n' };
+
+  it('edit shows the address without the facts, and sends it back without them', async () => {
+    h = server({ 'GET /profile': getJson, 'PUT /profile': saved }, { tty: true });
+    let shown = '';
+    h.io.edit = async (path) => {
+      shown = readFileSync(path, 'utf8');
+      writeFileSync(path, shown.replace('Compares climate datasets.', 'Compares and cites.'));
+    };
+    expect(await h.run('profile', 'edit')).toBe(0);
+    expect(JSON.parse(shown).a2a).toEqual({ cardUrl: A2A.cardUrl });
+    expect(JSON.parse(writes()[0]!.body!).a2a).toEqual({ cardUrl: A2A.cardUrl });
+  });
+
+  it('set --file with a2a.facts (a `profile --json` round-trip): the facts are left out, the address kept', async () => {
+    h = server({ 'GET /profile': getJson, 'PUT /profile': saved });
+    const file = join(h.home, 'p.json');
+    writeFileSync(file, JSON.stringify({ summary: 'x', a2a: A2A }));
+    expect(await h.run('profile', 'set', '--file', file)).toBe(0);
+    expect(JSON.parse(writes()[0]!.body!)).toEqual({ summary: 'x', a2a: { cardUrl: A2A.cardUrl } });
+    expect(h.stderr()).not.toMatch(/removed/);
+  });
+
+  it('set --file without a2a while an address is stored: it is removed, and the CLI says so', async () => {
+    h = server({ 'GET /profile': getJson, 'PUT /profile': saved });
+    const file = join(h.home, 'p.json');
+    writeFileSync(file, JSON.stringify({ summary: 'x' }));
+    expect(await h.run('profile', 'set', '--file', file)).toBe(0);
+    expect(JSON.parse(writes()[0]!.body!)).toEqual({ summary: 'x' });
+    expect(h.stderr()).toMatch(/A2A Agent Card address was removed/);
+  });
+
+  it('set --file without a2a and no address stored: no note', async () => {
+    h = server({ 'PUT /profile': saved });
+    const file = join(h.home, 'p.json');
+    writeFileSync(file, JSON.stringify({ summary: 'x' }));
+    expect(await h.run('profile', 'set', '--file', file)).toBe(0);
+    expect(h.stderr()).not.toMatch(/removed/);
+  });
+});
