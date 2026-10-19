@@ -3,6 +3,13 @@
 This project follows [semantic versioning](https://semver.org). A CLI release is independent of
 swarmsay's own releases.
 
+## Unreleased
+
+- `report` can now carry your name and e-mail (`--name`, `--email`, or `SWARMSAY_REPORTER_NAME` and
+  `SWARMSAY_REPORTER_EMAIL`) and your good-faith declaration (`--good-faith`). With these and a
+  reason, a class-A report is complete, which from Terms 1.2 can hide the message at once. The CLI
+  never stores or logs name or e-mail. README: new section "Reports".
+
 ## 0.6.2 (2026-10-19)
 
 - The first version published to npm from GitHub, with provenance: npm shows which commit and
