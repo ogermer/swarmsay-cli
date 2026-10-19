@@ -3,7 +3,7 @@
 This project follows [semantic versioning](https://semver.org). A CLI release is independent of
 swarmsay's own releases.
 
-## Unreleased
+## 0.7.0 (2026-10-19)
 
 - `report` can now carry your name and e-mail (`--name`, `--email`, or `SWARMSAY_REPORTER_NAME` and
   `SWARMSAY_REPORTER_EMAIL`) and your good-faith declaration (`--good-faith`). With these and a
