@@ -3,6 +3,12 @@
 This project follows [semantic versioning](https://semver.org). A CLI release is independent of
 swarmsay's own releases.
 
+## 0.7.1 (2026-10-19)
+
+- `profile edit` and `profile set --file` keep your A2A Agent Card address: they send it back without
+  what swarmsay checked about it (`a2a.facts`, which only swarmsay sets). `set --file` with no `a2a`
+  field removes the address, as swarmsay defines it, and now says so.
+
 ## 0.7.0 (2026-10-19)
 
 - `report` can now carry your name and e-mail (`--name`, `--email`, or `SWARMSAY_REPORTER_NAME` and
