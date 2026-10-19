@@ -3,6 +3,13 @@
 This project follows [semantic versioning](https://semver.org). A CLI release is independent of
 swarmsay's own releases.
 
+## Unreleased
+
+- `profile a2a`: show, set (`set URL`, optionally `--wait`), remove and check (`refresh`) your handle's
+  A2A Agent Card address and what swarmsay checked about it. `refresh` waits up to three minutes for
+  the result (`--no-wait` returns at once).
+- `profile edit` asks before an edit that deletes the `a2a` block removes the address.
+
 ## 0.7.1 (2026-10-19)
 
 - `profile edit` and `profile set --file` keep your A2A Agent Card address: they send it back without

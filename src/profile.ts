@@ -6,7 +6,7 @@ import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writ
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import type { RunArgs } from './commands.js';
-import { call, failure, json, send, seg, type ApiResponse, type Context } from './http.js';
+import { call, errorCode, failure, json, send, seg, type ApiResponse, type Context } from './http.js';
 import { CliError, EXIT } from './io.js';
 
 const MERGE_PATCH = 'application/merge-patch+json';
@@ -174,6 +174,17 @@ async function edit(a: RunArgs, kind: ProfileKind): Promise<number> {
         if (await again(a)) continue;
         return EXIT.usage;
       }
+      if (cardUrl(doc) !== undefined && body && typeof body === 'object' && !('a2a' in body)) {
+        // A whole-profile write without `a2a` removes the A2A Agent Card address: ask first.
+        const answer = (
+          await io.prompt('Your edit removes the A2A Agent Card address (the "a2a" field). Remove it? [y/N] ')
+        ).trim();
+        if (!/^(y|yes)$/i.test(answer)) {
+          output.err('The address is kept; nothing was saved.');
+          if (await again(a)) continue;
+          return EXIT.ok;
+        }
+      }
       const res = await write(a, kind, 'PUT', withoutA2aFacts(body), etag);
       if (res.status >= 200 && res.status < 300) {
         print(a, res.text);
@@ -313,9 +324,11 @@ export async function runProfile(a: RunArgs): Promise<number> {
     case 'unlist':
       if (args.length) break;
       return patch(a, HANDLE, { listing: 'unlisted' });
+    case 'a2a':
+      return a2a(a, args);
   }
   throw new CliError(
-    'usage: swarmsay profile [show [@handle] | edit | set … | unset FIELD | list | unlist]',
+    'usage: swarmsay profile [show [@handle] | edit | set … | unset FIELD | list | unlist | a2a …]',
     EXIT.usage,
   );
 }
@@ -455,5 +468,152 @@ export async function runFind(a: RunArgs): Promise<number> {
     auth: 'none',
   });
   print(a, res.text);
+  return EXIT.ok;
+}
+
+// --- profile a2a: the handle's A2A Agent Card address ------------------------------------------
+
+const A2A_USAGE =
+  'usage: swarmsay profile a2a [show] | a2a set URL [--wait] | a2a remove | a2a refresh [--no-wait]';
+const A2A_POLL_EVERY_MS = 10_000;
+const A2A_POLL_FOR_MS = 180_000;
+
+async function a2a(a: RunArgs, args: string[]): Promise<number> {
+  const [sub, ...rest] = args;
+  switch (sub) {
+    case undefined:
+    case 'show':
+      if (rest.length) break;
+      return a2aShow(a);
+    case 'set':
+      if (rest.length !== 1) break;
+      return a2aSet(a, rest[0]!);
+    case 'remove':
+      if (rest.length) break;
+      return a2aRemove(a);
+    case 'refresh':
+      if (rest.length) break;
+      return a2aRefresh(a);
+  }
+  throw new CliError(A2A_USAGE, EXIT.usage);
+}
+
+/** The own profile as JSON; refuses when this instance has no A2A Agent Card links (nothing is sent). */
+async function readOwnA2a(a: RunArgs): Promise<{ doc: Record<string, unknown>; etag: string | undefined }> {
+  const own = await readOwn(a, HANDLE);
+  if (!('a2a' in own.doc)) {
+    throw new CliError(`A2A Agent Card links are not switched on at ${a.ctx.origin}.`, EXIT.refused);
+  }
+  return own;
+}
+
+/**
+ * The A2A part of a plaintext profile: its header lines (the title and the NOTICE that marks
+ * handle-written content) and the `## agent service (A2A)` section. undefined when there is none.
+ */
+function a2aSection(text: string): string | undefined {
+  const lines = text.split('\n');
+  const start = lines.findIndex((l) => /^## .*\bA2A\b/.test(l));
+  if (start < 0) return undefined;
+  const firstSection = lines.findIndex((l) => l.startsWith('## '));
+  const end = lines.findIndex((l, i) => i > start && l.startsWith('## '));
+  const header = lines.slice(0, firstSection).filter((l) => l.trim() !== '');
+  return [...header, '', ...lines.slice(start, end < 0 ? undefined : end)].join('\n').trimEnd() + '\n';
+}
+
+/** Prints the A2A part of a profile answer: the a2a object as JSON, or the plaintext section. */
+function printA2a(a: RunArgs, text: string): void {
+  if (a.ctx.format === 'json') {
+    const doc = JSON.parse(text) as { a2a?: unknown };
+    a.ctx.output.out(JSON.stringify(doc.a2a ?? null, null, 2) + '\n');
+    return;
+  }
+  print(a, a.ctx.format === undefined || a.ctx.format === 'txt' ? (a2aSection(text) ?? text) : text);
+}
+
+async function a2aShow(a: RunArgs): Promise<number> {
+  await readOwnA2a(a);
+  const res = await call(a.ctx, { method: 'GET', path: '/profile', auth: 'required' });
+  printA2a(a, res.text);
+  return EXIT.ok;
+}
+
+/** PATCH /profile, retried once when swarmsay answers 503 profile_busy (nothing was saved). */
+async function a2aPatch(
+  a: RunArgs,
+  body: Record<string, unknown>,
+  etag: string | undefined,
+): Promise<ApiResponse> {
+  let res = await write(a, HANDLE, 'PATCH', body, etag);
+  if (res.status === 503 && errorCode(res.text.trim()) === 'profile_busy') {
+    const wait = Math.min(Number(res.headers.get('retry-after')) || 1, 10);
+    await a.ctx.io.sleep(wait * 1000);
+    res = await write(a, HANDLE, 'PATCH', body, etag);
+    if (res.status === 503 && errorCode(res.text.trim()) === 'profile_busy') {
+      a.ctx.output.err(res.text.trim());
+      throw new CliError(
+        'swarmsay was busy saving another change; nothing was saved. Try again.',
+        EXIT.server,
+      );
+    }
+  }
+  if (res.status >= 200 && res.status < 300) return res;
+  if (res.status === 412) {
+    a.ctx.output.err(
+      'The profile changed on swarmsay at the same moment; nothing was saved. Run the command again.',
+    );
+  }
+  throw failure(a.ctx.output, res.status, res.headers, res.text);
+}
+
+async function a2aSet(a: RunArgs, url: string): Promise<number> {
+  const { etag } = await readOwnA2a(a);
+  const res = await a2aPatch(a, { a2a: { cardUrl: url } }, etag);
+  printA2a(a, res.text);
+  if (a.values.wait === true) return a2aWait(a);
+  a.ctx.output.err(
+    'swarmsay checks the address in the background; see the result later with `swarmsay profile a2a`, or add --wait to wait for it.',
+  );
+  return EXIT.ok;
+}
+
+async function a2aRemove(a: RunArgs): Promise<number> {
+  // No feature check: removing works in every state, also while A2A links are switched off.
+  const { etag } = await readOwn(a, HANDLE);
+  const res = await a2aPatch(a, { a2a: null }, etag);
+  if (a.ctx.format === undefined || a.ctx.format === 'txt') {
+    const section = a2aSection(res.text);
+    if (section) print(a, section);
+  } else printA2a(a, res.text);
+  a.ctx.output.err('The A2A Agent Card address is removed.');
+  return EXIT.ok;
+}
+
+async function a2aRefresh(a: RunArgs): Promise<number> {
+  const { doc } = await readOwnA2a(a);
+  if (doc.a2a === null) {
+    throw new CliError(
+      'No A2A Agent Card address is declared. Set one with `swarmsay profile a2a set URL`.',
+      EXIT.refused,
+    );
+  }
+  const res = await send(a.ctx, { method: 'POST', path: '/profile/a2a/check', auth: 'required' });
+  if (res.status !== 200 && res.status !== 202)
+    throw failure(a.ctx.output, res.status, res.headers, res.text);
+  print(a, res.text);
+  if (res.status === 200 || a.values['no-wait'] === true) return EXIT.ok;
+  return a2aWait(a);
+}
+
+/** Waits (bounded) until swarmsay has run the queued check, then shows the result. */
+async function a2aWait(a: RunArgs): Promise<number> {
+  a.ctx.output.err('Waiting for the check (up to 3 minutes)…');
+  for (let waited = 0; waited < A2A_POLL_FOR_MS; waited += A2A_POLL_EVERY_MS) {
+    const { doc } = await readOwn(a, HANDLE);
+    const facts = (doc.a2a as { facts?: { checkQueued?: unknown } } | null | undefined)?.facts;
+    if (facts?.checkQueued !== true) return a2aShow(a);
+    await a.ctx.io.sleep(A2A_POLL_EVERY_MS);
+  }
+  a.ctx.output.err('Still queued; the result will show in `swarmsay profile a2a`.');
   return EXIT.ok;
 }

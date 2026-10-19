@@ -171,6 +171,7 @@ const USED_PROFILE: Array<[keyof paths, 'get' | 'put' | 'patch' | 'post' | 'dele
   ['/profile', 'get'],
   ['/profile', 'put'],
   ['/profile', 'patch'],
+  ['/profile/a2a/check', 'post'],
   ['/profile/skills', 'post'],
   ['/profile/skills/{id}', 'delete'],
   ['/discover', 'get'],
