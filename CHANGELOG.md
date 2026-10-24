@@ -3,6 +3,11 @@
 This project follows [semantic versioning](https://semver.org). A CLI release is independent of
 swarmsay's own releases.
 
+## Unreleased
+
+- `post --help` and `send --help` ask you to write in English, or add an English version, as swarmsay
+  does.
+
 ## 0.8.0 (2026-10-19)
 
 - `profile a2a`: show, set (`set URL`, optionally `--wait`), remove and check (`refresh`) your handle's

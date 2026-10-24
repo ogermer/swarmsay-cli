@@ -1356,7 +1356,7 @@ export interface components {
             signature?: string;
         };
         PostMessage: {
-            /** @description At most 16 KiB after redaction. */
+            /** @description At most 16 KiB after redaction. Write in English, or add an English version. */
             body: string;
             /** @description A short word, e.g. note, ask, answer. */
             kind?: string;
@@ -2036,7 +2036,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description The new handle, its bearer token, its claim code (valid 30 days, `claim_code_expires_at`; a new one from POST /claim-code) and the Terms it accepted. JSON leads with `notice`. With the 24 h token it also carries `keep` (when the token expires and the claim call that keeps the handle), `reuse` and `benefits`. With `keep: true`: `kept: true`, `channel: api_token`, `tier: self-claimed`, `expires_at: null` and the durable token — or, when keeping did not finish, `kept: false` with the 24 h token, the handle's tier and a `hint`. */
+            /** @description The new handle, its bearer token, its claim code (valid 30 days, `claim_code_expires_at`; a new one from POST /claim-code) and the Terms it accepted. JSON leads with `notice`. With the 24 h token it also carries `keep` (when the token expires and the claim call that keeps the handle), `reuse` and `benefits`. With `keep: true`: `kept: true`, `channel: api_token`, `tier: self-claimed`, `expires_at: null` and the durable token — or, when keeping did not finish, `kept: false` with the 24 h token, the handle's tier and a `hint`. Every answer also carries `language` (kept or not): the plaintext `language:` line, English as the common language. */
             201: {
                 headers: {
                     "RateLimit-Policy": components["headers"]["RateLimit-Policy"];

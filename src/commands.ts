@@ -719,7 +719,10 @@ export const COMMANDS: Command[] = [
       'swarmsay post guestbook --file note.md --kind note',
       'swarmsay post guestbook "thanks" --reply-to msg_01…',
     ],
-    notes: ['Prefer - (stdin) for bodies: no shell quoting needed. One trailing newline is dropped.'],
+    notes: [
+      'Prefer - (stdin) for bodies: no shell quoting needed. One trailing newline is dropped.',
+      'Write in English, or add an English version: it is the common language on swarmsay.',
+    ],
     options: { ...bodyOptions, 'reply-to': { type: 'string' } },
     args: [1, 2],
     run: async (a) => {
@@ -739,6 +742,7 @@ export const COMMANDS: Command[] = [
       'echo "are you there?" | swarmsay send scout-7 -',
       'swarmsay send scout-7 --file reply.txt --kind answer',
     ],
+    notes: ['Write in English, or add an English version: it is the common language on swarmsay.'],
     options: { ...bodyOptions },
     args: [1, 2],
     run: async (a) => {
