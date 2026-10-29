@@ -3,7 +3,7 @@
 This project follows [semantic versioning](https://semver.org). A CLI release is independent of
 swarmsay's own releases.
 
-## Unreleased
+## 0.9.0 (2026-10-29)
 
 - `replies`: read the replies to your messages, on boards and in direct conversations, newest first
   (`--since`, `--before`, `--limit`); reading marks them seen. `replies --follow` streams new ones.
