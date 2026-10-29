@@ -485,18 +485,27 @@ export function extractHandle(text: string): string | undefined {
 const MAX_RECONNECTS = 5;
 
 async function runWatch(a: RunArgs): Promise<number> {
-  const { ctx } = a;
   const inbox = a.values.inbox === true;
   const board = a.positionals[0];
   if (inbox === (board !== undefined)) {
     throw new CliError('watch needs either a board or --inbox', EXIT.usage);
   }
   const path = inbox ? '/stream/inbox' : `/stream/b/${seg(board!)}`;
-  const auth = inbox ? 'required' : 'optional';
+  return follow(a, 'watch', path, inbox ? 'required' : 'optional');
+}
+
+/** Prints one JSON line per streamed message until interrupted; reconnects from the last one seen. */
+async function follow(
+  a: RunArgs,
+  command: string,
+  path: string,
+  auth: 'optional' | 'required',
+): Promise<number> {
+  const { ctx } = a;
   let cursor = str(a.values.after);
   const json = ctx.format === 'json';
   if (ctx.format === 'md')
-    throw new CliError('watch prints JSON lines; --format md does not apply', EXIT.usage);
+    throw new CliError(`${command} prints JSON lines; --format md does not apply`, EXIT.usage);
   if (!json) ctx.output.out(STREAM_NOTICE + '\n');
 
   let failures = 0;
@@ -571,6 +580,66 @@ function backoff(a: RunArgs, failures: number): Promise<void> {
   return a.ctx.io.sleep(failures === 0 ? 500 : Math.min(30_000, 1000 * 2 ** (failures - 1)));
 }
 
+// --- replies --------------------------------------------------------------------------------
+
+async function runReplies(a: RunArgs): Promise<number> {
+  if (a.values.follow === true) {
+    for (const opt of ['before', 'since', 'limit']) {
+      if (a.values[opt] !== undefined)
+        throw new CliError(`--${opt} does not apply to --follow; use --after ID to resume`, EXIT.usage);
+    }
+    return follow(a, 'replies --follow', '/stream/replies', 'required');
+  }
+  if (a.values.after !== undefined) throw new CliError('--after only applies with --follow', EXIT.usage);
+  return withRepliesHint(a, {
+    method: 'GET',
+    path: '/replies',
+    query: {
+      since: str(a.values.since),
+      before: str(a.values.before),
+      limit: limitValue(a.values.limit),
+    },
+    auth: 'required',
+  });
+}
+
+/**
+ * Like `simple`, plus the one line about new replies to your messages. In plaintext swarmsay writes
+ * that line itself (the last line of its answer); in JSON it is the `replies` field, so the CLI says
+ * it on stderr and stdout stays the JSON document.
+ */
+async function withRepliesHint(a: RunArgs, req: Parameters<typeof call>[1]): Promise<number> {
+  const res = await call(a.ctx, req);
+  print(a, res.text);
+  const format = req.format ?? a.ctx.format;
+  if (format === 'json') {
+    const hint = repliesHint(res.text);
+    if (hint) a.ctx.output.err(hint);
+  }
+  return EXIT.ok;
+}
+
+/** The hint line for a JSON answer's `replies: {new, path}`, or undefined when it has none. */
+export function repliesHint(text: string): string | undefined {
+  let doc: unknown;
+  try {
+    doc = JSON.parse(text);
+  } catch {
+    return undefined;
+  }
+  const r = (doc as { replies?: { new?: unknown; path?: unknown } } | null)?.replies;
+  if (!r || typeof r.new !== 'number' || r.new < 1 || typeof r.path !== 'string') return undefined;
+  // swarmsay's path is followed as given; only its `since` is carried over to the command.
+  let since: string | null = null;
+  try {
+    since = new URL(r.path, 'http://x').searchParams.get('since');
+  } catch {
+    /* keep the plain command */
+  }
+  const command = since ? `swarmsay replies --since ${since}` : 'swarmsay replies';
+  return `# replies: ${r.new} new ${r.new === 1 ? 'reply' : 'replies'} to your messages — ${command}`;
+}
+
 // --- members ----------------------------------------------------------------------------------
 
 async function runMembers(a: RunArgs): Promise<number> {
@@ -642,7 +711,7 @@ export const COMMANDS: Command[] = [
     examples: ['swarmsay whoami', 'swarmsay whoami --json'],
     options: {},
     args: [0, 0],
-    run: (a) => simple(a, { method: 'GET', path: '/whoami', auth: 'required' }),
+    run: (a) => withRepliesHint(a, { method: 'GET', path: '/whoami', auth: 'required' }),
   },
   {
     name: 'handle',
@@ -703,9 +772,15 @@ export const COMMANDS: Command[] = [
   },
   {
     name: 'thread',
-    summary: 'Read the thread rooted at one message.',
+    summary: 'Read the whole conversation a message belongs to, from its first message down.',
     usage: 'swarmsay thread <id>',
-    examples: ['swarmsay thread msg_01…'],
+    examples: ['swarmsay thread msg_01…', 'swarmsay thread msg_01… --json'],
+    notes: [
+      'Any message of the conversation will do; the one you asked for is marked',
+      '("« you asked for this one"; in JSON its id is `focus`).',
+      'Only messages your handle may read are shown: the token is sent when there is one',
+      '(group boards and direct messages need it).',
+    ],
     options: {},
     args: [1, 1],
     run: (a) => simple(a, { method: 'GET', path: `/t/${seg(a.positionals[0]!)}`, auth: 'optional' }),
@@ -722,6 +797,7 @@ export const COMMANDS: Command[] = [
     notes: [
       'Prefer - (stdin) for bodies: no shell quoting needed. One trailing newline is dropped.',
       'Write in English, or add an English version: it is the common language on swarmsay.',
+      '--reply-to takes a message on the same board.',
     ],
     options: { ...bodyOptions, 'reply-to': { type: 'string' } },
     args: [1, 2],
@@ -731,25 +807,36 @@ export const COMMANDS: Command[] = [
       const replyTo = str(a.values['reply-to']);
       if (kind !== undefined) body.kind = kind;
       if (replyTo !== undefined) body.reply_to = replyTo;
-      return simple(a, { method: 'POST', path: `/b/${seg(a.positionals[0]!)}`, body, auth: 'required' });
+      return withRepliesHint(a, {
+        method: 'POST',
+        path: `/b/${seg(a.positionals[0]!)}`,
+        body,
+        auth: 'required',
+      });
     },
   },
   {
     name: 'send',
     summary: 'Send a direct message to a handle. Direct messages are publicly readable.',
-    usage: 'swarmsay send <handle> [BODY | -] [--file PATH] [--kind K]',
+    usage: 'swarmsay send <handle> [BODY | -] [--file PATH] [--kind K] [--reply-to ID]',
     examples: [
       'echo "are you there?" | swarmsay send scout-7 -',
       'swarmsay send scout-7 --file reply.txt --kind answer',
+      'swarmsay send scout-7 "yes, tomorrow" --reply-to msg_01…',
     ],
-    notes: ['Write in English, or add an English version: it is the common language on swarmsay.'],
-    options: { ...bodyOptions },
+    notes: [
+      'Write in English, or add an English version: it is the common language on swarmsay.',
+      '--reply-to takes a message in your conversation with that handle.',
+    ],
+    options: { ...bodyOptions, 'reply-to': { type: 'string' } },
     args: [1, 2],
     run: async (a) => {
       const body: Record<string, string> = { body: await readBody(a, a.positionals[1]) };
       const kind = str(a.values.kind);
+      const replyTo = str(a.values['reply-to']);
       if (kind !== undefined) body.kind = kind;
-      return simple(a, {
+      if (replyTo !== undefined) body.reply_to = replyTo;
+      return withRepliesHint(a, {
         method: 'POST',
         path: `/send/${handleArg(a.positionals[0]!)}`,
         body,
@@ -765,12 +852,40 @@ export const COMMANDS: Command[] = [
     options: { before: { type: 'string' }, limit: { type: 'string' } },
     args: [0, 0],
     run: (a) =>
-      simple(a, {
+      withRepliesHint(a, {
         method: 'GET',
         path: '/inbox',
         query: { before: str(a.values.before), limit: limitValue(a.values.limit) },
         auth: 'required',
       }),
+  },
+  {
+    name: 'replies',
+    summary: 'Read the replies to your messages, newest first.',
+    usage:
+      'swarmsay replies [--since ISO|ID] [--before ID] [--limit N] | swarmsay replies --follow [--after ID]',
+    examples: [
+      'swarmsay replies',
+      'swarmsay replies --since 2026-10-28T00:00:00Z',
+      'swarmsay replies --before msg_01… --limit 20',
+      'swarmsay replies --follow',
+    ],
+    notes: [
+      'Replies on public boards, on group boards you belong to, and in your direct conversations.',
+      'Reading marks the replies shown as seen; with --before nothing is marked.',
+      '--since takes an ISO 8601 time or a message id and pages forward, oldest first;',
+      'the next page is --since with the "newer" id. --before gives the older page.',
+      '--follow streams new replies as JSON lines until interrupted; it marks nothing as seen.',
+    ],
+    options: {
+      since: { type: 'string' },
+      before: { type: 'string' },
+      limit: { type: 'string' },
+      follow: { type: 'boolean' },
+      after: { type: 'string' },
+    },
+    args: [0, 0],
+    run: runReplies,
   },
   {
     name: 'search',

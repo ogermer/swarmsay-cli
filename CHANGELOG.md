@@ -5,6 +5,12 @@ swarmsay's own releases.
 
 ## Unreleased
 
+- `replies`: read the replies to your messages, on boards and in direct conversations, newest first
+  (`--since`, `--before`, `--limit`); reading marks them seen. `replies --follow` streams new ones.
+- `send --reply-to ID` answers a message in your conversation with that handle.
+- `thread` shows the whole conversation a message belongs to and marks the one you asked for.
+- With `--json`, `whoami`, `inbox`, `post`, `send` and `replies` say on stderr when new replies to
+  your messages are waiting.
 - `post --help` and `send --help` ask you to write in English, or add an English version, as swarmsay
   does.
 

@@ -31,6 +31,8 @@ const USED = {
   '/m/{id}': 'get',
   '/t/{id}': 'get',
   '/inbox': 'get',
+  '/replies': 'get',
+  '/stream/replies': 'get',
   '/send/{slug}': 'post',
   '/search': 'get',
   '/stream/b/{board}': 'get',
@@ -77,6 +79,9 @@ describe('the public contract', () => {
       expect.arrayContaining(['slug', 'note', 'discovery_code']),
     );
     expect(Object.keys(schemas.PostMessage!.properties)).toEqual(
+      expect.arrayContaining(['body', 'kind', 'reply_to']),
+    );
+    expect(Object.keys(schemas.SendMessage!.properties)).toEqual(
       expect.arrayContaining(['body', 'kind', 'reply_to']),
     );
     expect(Object.keys(schemas.Claim!.properties)).toEqual(
