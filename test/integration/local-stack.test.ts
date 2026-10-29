@@ -127,6 +127,63 @@ describe.sequential(`the CLI against ${ORIGIN}`, { timeout: 180_000 }, () => {
     expect(st.out).toMatch(/durable \(the handle is kept\)/);
   });
 
+  it('replies: a reply shows up for the parent author, is marked seen, and thread shows it all', () => {
+    const id = (out: string) => /"id":\s*"(msg_[A-Za-z0-9]+)"/.exec(out)?.[1];
+    const k = `${slug}-k`;
+    const root = cli(['post', board, `a question from ${slug}`, '--as', slug, '--json']);
+    expect(root.code, root.err).toBe(0);
+    const rootId = id(root.out)!;
+    expect(rootId).toBeDefined();
+    const reply = cli(['post', board, `an answer from ${k}`, '--reply-to', rootId, '--as', k, '--json']);
+    expect(reply.code, reply.err).toBe(0);
+    const replyId = id(reply.out)!;
+
+    const before = cli(['whoami', '--as', slug, '--json']);
+    expect(before.code, before.err).toBe(0);
+    expect(before.err).toMatch(/^# replies: 1 new reply to your messages — swarmsay replies/m);
+
+    const r = cli(['replies', '--as', slug, '--json']);
+    expect(r.code, r.err).toBe(0);
+    const page = JSON.parse(r.out) as { messages: Array<{ id: string; parent: { id: string } }> };
+    expect(page.messages.find((m) => m.id === replyId)?.parent.id).toBe(rootId);
+    const after = cli(['whoami', '--as', slug, '--json']);
+    expect(after.err).not.toMatch(/new repl/);
+
+    const t = cli(['thread', replyId, '--json']);
+    expect(t.code, t.err).toBe(0);
+    const thread = JSON.parse(t.out) as { focus: string; messages: Array<{ id: string }> };
+    expect(thread.focus).toBe(replyId);
+    expect(thread.messages.map((m) => m.id)).toEqual(expect.arrayContaining([rootId, replyId]));
+    expect(cli(['thread', replyId]).out).toMatch(/you asked for this one/);
+  });
+
+  it('send --reply-to answers a direct message; an unknown parent is refused verbatim', () => {
+    const k = `${slug}-k`;
+    const dm = cli(['send', slug, `a direct question from ${k}`, '--as', k, '--json']);
+    expect(dm.code, dm.err).toBe(0);
+    const dmId = /"id":\s*"(msg_[A-Za-z0-9]+)"/.exec(dm.out)?.[1];
+    expect(dmId).toBeDefined();
+    const ok = cli(['send', k, 'a direct answer', '--reply-to', dmId!, '--as', slug]);
+    expect(ok.code, ok.err).toBe(0);
+    const gone = cli([
+      'send',
+      k,
+      'into the void',
+      '--reply-to',
+      'msg_01JZZZZZZZZZZZZZZZZZZZZZZZ',
+      '--as',
+      slug,
+    ]);
+    expect(gone.code).toBe(1);
+    expect(gone.err).toContain('That message is not available to reply to.');
+  });
+
+  it('replies shows swarmsay’s sentence for a bad --before', () => {
+    const r = cli(['replies', '--before', 'yesterday', '--as', slug]);
+    expect(r.code).toBe(1);
+    expect(r.err).toContain('before must be a message id');
+  });
+
   it('an unknown handle is exit 1 with the error on stderr', () => {
     const r = cli(['handle', `no-such-${slug}`]);
     expect(r.code).toBe(1);
