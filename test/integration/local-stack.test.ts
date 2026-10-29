@@ -37,6 +37,19 @@ function cli(args: string[], input?: string, env: Record<string, string> = {}) {
   return { code: r.status, out: r.stdout, err: r.stderr };
 }
 
+// The other side of a conversation in the reply tests: the profile suite's handle when its key file is
+// given (swarmsay limits handle creation per address, so this saves one), else the second handle the
+// suite creates.
+const KEY_FILE = process.env.SWARMSAY_IT_PROFILE_KEY_FILE;
+function other(args: string[]) {
+  return KEY_FILE
+    ? cli(args, undefined, { SWARMSAY_TOKEN: readFileSync(KEY_FILE, 'utf8').trim() })
+    : cli([...args, '--as', `${slug}-k`]);
+}
+function otherSlug(): string {
+  return KEY_FILE ? (JSON.parse(other(['whoami', '--json']).out) as { handle: string }).handle : `${slug}-k`;
+}
+
 const slug = `cli-it-${Date.now().toString(36)}`;
 const board = `cli-it-${Date.now().toString(36)}`;
 
@@ -127,14 +140,14 @@ describe.sequential(`the CLI against ${ORIGIN}`, { timeout: 180_000 }, () => {
     expect(st.out).toMatch(/durable \(the handle is kept\)/);
   });
 
-  it('replies: a reply shows up for the parent author, is marked seen, and thread shows it all', () => {
+  it('replies: a reply shows up for the parent author, is marked seen, and thread shows it all', async () => {
     const id = (out: string) => /"id":\s*"(msg_[A-Za-z0-9]+)"/.exec(out)?.[1];
-    const k = `${slug}-k`;
+    const k = otherSlug();
     const root = cli(['post', board, `a question from ${slug}`, '--as', slug, '--json']);
     expect(root.code, root.err).toBe(0);
     const rootId = id(root.out)!;
     expect(rootId).toBeDefined();
-    const reply = cli(['post', board, `an answer from ${k}`, '--reply-to', rootId, '--as', k, '--json']);
+    const reply = other(['post', board, `an answer from ${k}`, '--reply-to', rootId, '--json']);
     expect(reply.code, reply.err).toBe(0);
     const replyId = id(reply.out)!;
 
@@ -142,6 +155,9 @@ describe.sequential(`the CLI against ${ORIGIN}`, { timeout: 180_000 }, () => {
     expect(before.code, before.err).toBe(0);
     expect(before.err).toMatch(/^# replies: 1 new reply to your messages — swarmsay replies/m);
 
+    // swarmsay never moves the seen marker past "now minus 60 s", so a reply that young stays new
+    // even after it was read. Wait it out, then read.
+    await new Promise((resolve) => setTimeout(resolve, 65_000));
     const r = cli(['replies', '--as', slug, '--json']);
     expect(r.code, r.err).toBe(0);
     const page = JSON.parse(r.out) as { messages: Array<{ id: string; parent: { id: string } }> };
@@ -158,8 +174,8 @@ describe.sequential(`the CLI against ${ORIGIN}`, { timeout: 180_000 }, () => {
   });
 
   it('send --reply-to answers a direct message; an unknown parent is refused verbatim', () => {
-    const k = `${slug}-k`;
-    const dm = cli(['send', slug, `a direct question from ${k}`, '--as', k, '--json']);
+    const k = otherSlug();
+    const dm = other(['send', slug, `a direct question from ${k}`, '--json']);
     expect(dm.code, dm.err).toBe(0);
     const dmId = /"id":\s*"(msg_[A-Za-z0-9]+)"/.exec(dm.out)?.[1];
     expect(dmId).toBeDefined();
