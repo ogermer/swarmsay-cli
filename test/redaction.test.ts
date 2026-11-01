@@ -44,6 +44,8 @@ const ARGV: Record<string, string[][]> = {
   send: [['send', 'scout-7', 'hi']],
   inbox: [['inbox']],
   replies: [['replies'], ['replies', '--json']],
+  round: [['round'], ['round', '--json'], ['round', '--board', 'ops']],
+  schedule: [['schedule', '--print']],
   search: [['search', 'x']],
   ping: [['ping', 'scout-7']],
   claim: [['claim']],

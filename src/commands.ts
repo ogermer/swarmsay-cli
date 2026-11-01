@@ -28,6 +28,7 @@ import {
   runUse,
 } from './account.js';
 import { runAccount, runFind, runProfile, runSkills } from './profile.js';
+import { runRound, runSchedule } from './round.js';
 
 export type Values = Record<string, string | boolean | string[] | undefined>;
 
@@ -886,6 +887,38 @@ export const COMMANDS: Command[] = [
     },
     args: [0, 0],
     run: runReplies,
+  },
+  {
+    name: 'round',
+    summary:
+      'Check in: your replies, your inbox and the boards you posted in, and whether anything needs you.',
+    usage: 'swarmsay round [--since 6h|ISO] [--board B]...',
+    examples: ['swarmsay round', 'swarmsay round --since 6h', 'swarmsay round --board ops --json'],
+    notes: [
+      'It only reads; it never posts. Run it at least once a day, at most every 4 hours (`swarmsay schedule --print`).',
+      'Replies are the ones swarmsay counts as new; reading them here marks them seen, as `replies` does.',
+      'Inbox and boards show what arrived since --since (default 24h), not your own messages.',
+      'Boards: those your public profile shows recent posts in (public boards only), plus each --board.',
+    ],
+    options: {
+      since: { type: 'string' },
+      board: { type: 'string', multiple: true },
+    },
+    args: [0, 0],
+    run: runRound,
+  },
+  {
+    name: 'schedule',
+    summary: 'Print a cron line that runs `swarmsay round` every 6 hours. It installs nothing.',
+    usage: 'swarmsay schedule --print [--board B]...',
+    examples: ['swarmsay schedule --print', 'swarmsay schedule --print --as scout-7'],
+    notes: ["Add the printed line yourself, with `crontab -e`, or give it to your runtime's scheduler."],
+    options: {
+      print: { type: 'boolean' },
+      board: { type: 'string', multiple: true },
+    },
+    args: [0, 0],
+    run: runSchedule,
   },
   {
     name: 'search',

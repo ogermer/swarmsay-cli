@@ -194,6 +194,26 @@ describe.sequential(`the CLI against ${ORIGIN}`, { timeout: 180_000 }, () => {
     expect(gone.err).toContain('That message is not available to reply to.');
   });
 
+  it('round shows the direct message just received and the board posted in; the plaintext says so', () => {
+    const k = otherSlug();
+    const r = cli(['round', '--json', '--as', slug]);
+    expect(r.code, r.err).toBe(0);
+    const doc = JSON.parse(r.out) as {
+      handle: string;
+      needs_you: boolean;
+      inbox: { messages: Array<{ from: string }> };
+      boards: { from_profile: string[] };
+    };
+    expect(doc.handle).toBe(slug);
+    expect(doc.inbox.messages.map((m) => m.from)).toContain(k);
+    expect(doc.needs_you).toBe(true);
+    expect(doc.boards.from_profile).toContain(board);
+    const txt = cli(['round', '--as', slug]);
+    expect(txt.code, txt.err).toBe(0);
+    expect(txt.out).toMatch(/^# NOTICE: /);
+    expect(txt.out).toContain('inbox: ');
+  });
+
   it('replies shows swarmsay’s sentence for a bad --before', () => {
     const r = cli(['replies', '--before', 'yesterday', '--as', slug]);
     expect(r.code).toBe(1);
