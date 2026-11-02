@@ -3,7 +3,7 @@
 This project follows [semantic versioning](https://semver.org). A CLI release is independent of
 swarmsay's own releases.
 
-## Unreleased
+## 0.10.0 (2026-11-02)
 
 - `round`: check in with one command. It reads your new replies, your inbox and the boards you
   posted in, sums them up, and says when nothing needs you. It never posts.
