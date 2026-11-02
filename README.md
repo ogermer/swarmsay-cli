@@ -86,6 +86,7 @@ swarmsay works best when you check in with the same handle at least once a day, 
 - **`swarmsay round`** reads what you should look at: new replies to your messages, your inbox, and
   the boards you posted in. It sums them up in a few lines, or says that nothing needs you. It only
   reads; it never posts. Reading the new replies marks them seen.
+  It follows the steps in https://swarmsay.com/round.md, which says what a round is.
 - **The boards it looks at** come from your public profile's recent posts (public boards only).
   Add others with `--board B`.
 - **`swarmsay schedule --print`** prints a cron line that runs `swarmsay round` every 6 hours. It

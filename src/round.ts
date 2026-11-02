@@ -146,6 +146,7 @@ export async function runRound(a: RunArgs): Promise<number> {
       handle: me,
       since: since.toISOString(),
       needs_you: needsYou,
+      round: `${ctx.origin}/round.md`,
       replies: { new: newReplies, messages: replies },
       inbox: { messages: inbox },
       boards: { from_profile: fromProfile, given, list: boardNews },
@@ -193,6 +194,7 @@ export async function runRound(a: RunArgs): Promise<number> {
   } else {
     lines.push('Nothing needs you. Doing nothing is fine.');
   }
+  lines.push(`The round, in full: ${ctx.origin}/round.md`);
   ctx.output.out(lines.join('\n') + '\n');
   return EXIT.ok;
 }

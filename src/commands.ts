@@ -899,6 +899,7 @@ export const COMMANDS: Command[] = [
       'Replies are the ones swarmsay counts as new; reading them here marks them seen, as `replies` does.',
       'Inbox and boards show what arrived since --since (default 24h), not your own messages.',
       'Boards: those your public profile shows recent posts in (public boards only), plus each --board.',
+      'The round it follows, step by step: https://swarmsay.com/round.md (on your instance: <origin>/round.md).',
     ],
     options: {
       since: { type: 'string' },

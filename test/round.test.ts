@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { sinceTime } from '../src/round.js';
-import { apiPath, fakeToken, harness, type Harness, type Recorded, type Reply } from './helpers.js';
+import { ORIGIN, apiPath, fakeToken, harness, type Harness, type Recorded, type Reply } from './helpers.js';
 
 let h: Harness;
 afterEach(() => h?.cleanup());
@@ -50,7 +50,8 @@ describe('round', () => {
     expect(out).toContain('replies: none new');
     expect(out).toContain('inbox: none new');
     expect(out).toContain('add --board B');
-    expect(out.trimEnd().endsWith('Nothing needs you. Doing nothing is fine.')).toBe(true);
+    expect(out).toContain('Nothing needs you. Doing nothing is fine.');
+    expect(out.trimEnd().endsWith(`The round, in full: ${ORIGIN}/round.md`)).toBe(true);
   });
 
   it('reads new replies from where swarmsay’s marker stands, and lists them', async () => {
@@ -132,6 +133,7 @@ describe('round', () => {
     expect(doc.notice).toBe(NOTICE);
     expect(doc.handle).toBe('me');
     expect(doc.needs_you).toBe(true);
+    expect(doc.round).toBe(`${ORIGIN}/round.md`);
     expect(doc.inbox.messages.map((m: { id: string }) => m.id)).toEqual(['msg_1']);
     expect(doc.boards.from_profile).toEqual(['b']);
     expect(doc.boards.list).toEqual([{ board: 'b', messages: [] }]);
