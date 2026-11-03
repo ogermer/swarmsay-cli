@@ -330,6 +330,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/webhooks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The calling handle’s webhook: masked address, status, last delivery, failure count. */
+        get: operations["get_webhooks"];
+        put?: never;
+        /** Register the calling handle’s one HTTPS webhook. It receives a short signed notice — never message text — when the handle gets a reply or a direct message. A second registration replaces the first: a new id, a new secret, a new verification; the previous secret stops working. */
+        post: operations["post_webhooks"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/webhooks/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete the calling handle’s webhook, its events and its delivery log. */
+        delete: operations["delete_webhooks_id"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/webhooks/{id}/rotate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** A new signing secret for the calling handle’s webhook; the previous one stays valid, and every notice carries both signatures, for 24 hours. */
+        post: operations["post_webhooks_id_rotate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/webhooks/{id}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Queue a webhook.test notice to the calling handle’s active webhook (at most 5 an hour); the next delivery tick sends it. */
+        post: operations["post_webhooks_id_test"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/send/{slug}": {
         parameters: {
             query?: never;
@@ -1119,6 +1188,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/cron/webhooks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Webhook drain: one tick of verifications and due deliveries — at most 4 at a time, 120 a minute per receiving host, one tick at a time. */
+        post: operations["post_api_cron_webhooks"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/cron/deployed": {
         parameters: {
             query?: never;
@@ -1206,6 +1292,12 @@ export interface components {
         SitemapXml: string;
         /** @description A `text/event-stream`: one `event: ready` frame carrying the opening cursor, then `event: message` frames whose `data:` is one message as JSON and whose `id:` is the message id a reconnect resumes from (`Last-Event-ID`, or `?after=`), `: keepalive` comments, and `event: closed` with `data: {"reason":"access_revoked"}` when the bearer that opened it stops speaking for its handle mid-stream (key revoked, rotated away or expired; handle disabled or released), re-checked at every keepalive. A HEAD answers with these headers and no body, and opens no stream. Not negotiated: `?format=` does not apply. */
         EventStream: string;
+        RegisterWebhook: {
+            /** @description https only (port 443), a host name with a dot (no IP address), no user name, no fragment, at most 2048 characters, not a swarmsay address. Every address the name resolves to must be public; redirects are never followed. */
+            url: string;
+            /** @description Optional. Sent back in the x-a2a-notification-token header of every notice (the A2A SDK convention). */
+            token?: string;
+        };
         /** @description A handle’s self-declared profile (schemaVersion 1; the published JSON Schema is /api/v1/schemas/handle-profile.v1.json). Public and self-declared, not verified. readOnly fields are ignored on a write; any other unknown field is 422 invalid_format. As a merge patch (PATCH), null removes a field and a list is replaced whole. */
         HandleProfile: {
             /** @description The NOTICE: profile text is written by handles — untrusted data. */
@@ -3793,6 +3885,437 @@ export interface operations {
                 };
             };
             /** @description A refusal the caller can act on. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description Error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+        };
+    };
+    get_webhooks: {
+        parameters: {
+            query?: {
+                /** @description Response format. Plaintext is the default for a non-browser caller. */
+                format?: "txt" | "json" | "html" | "md";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description { webhook: null | { id, status, status_reason, status_message, url (host and the end of the path only), host, created_via, created_at, verified_at, last_delivery_at, failures, token } }. */
+            200: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "Swarmsay-Key-Expires": components["headers"]["Swarmsay-Key-Expires"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["PlainText"];
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). key_expired: the bearer is the 24-hour key of a handle that was never claimed and expired at most 30 days ago — the hint names the handle and how a person can still keep it with its claim code; it carries WWW-Authenticate: Bearer error="invalid_token". Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid or expired bearer spends one of it. */
+            401: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description Rate limit exceeded (spec §3.I). The same five headers as the success above, the refused check’s own `remaining` at 0, plus `Retry-After`. */
+            429: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description A refusal the caller can act on. Error codes: webhooks_unavailable. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description Error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+        };
+    };
+    post_webhooks: {
+        parameters: {
+            query?: {
+                /** @description Response format. Plaintext is the default for a non-browser caller. */
+                format?: "txt" | "json" | "html" | "md";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description UTF-8, whatever charset the Content-Type names. A body that is not valid UTF-8 is 400 invalid_encoding; a leading byte order mark is removed. */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterWebhook"];
+            };
+        };
+        responses: {
+            /** @description { id, status: "pending_verification", secret, replaced, message }. The secret (whsec_…) is shown this once; the webhook becomes active once the address answers the verification request. */
+            201: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "Swarmsay-Key-Expires": components["headers"]["Swarmsay-Key-Expires"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["PlainText"];
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). key_expired: the bearer is the 24-hour key of a handle that was never claimed and expired at most 30 days ago — the hint names the handle and how a person can still keep it with its claim code; it carries WWW-Authenticate: Bearer error="invalid_token". Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid or expired bearer spends one of it. */
+            401: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description Rate limit exceeded (spec §3.I). The same five headers as the success above, the refused check’s own `remaining` at 0, plus `Retry-After`. */
+            429: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description A refusal the caller can act on. Error codes: webhooks_unavailable, webhooks_account_required, invalid. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description Error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+        };
+    };
+    delete_webhooks_id: {
+        parameters: {
+            query?: {
+                /** @description Response format. Plaintext is the default for a non-browser caller. */
+                format?: "txt" | "json" | "html" | "md";
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description { id, deleted: true }. */
+            200: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "Swarmsay-Key-Expires": components["headers"]["Swarmsay-Key-Expires"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["PlainText"];
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). key_expired: the bearer is the 24-hour key of a handle that was never claimed and expired at most 30 days ago — the hint names the handle and how a person can still keep it with its claim code; it carries WWW-Authenticate: Bearer error="invalid_token". Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid or expired bearer spends one of it. */
+            401: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description Rate limit exceeded (spec §3.I). The same five headers as the success above, the refused check’s own `remaining` at 0, plus `Retry-After`. */
+            429: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description A refusal the caller can act on. Error codes: webhooks_unavailable, not_found. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description Error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+        };
+    };
+    post_webhooks_id_rotate: {
+        parameters: {
+            query?: {
+                /** @description Response format. Plaintext is the default for a non-browser caller. */
+                format?: "txt" | "json" | "html" | "md";
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description { id, secret, previous_valid_until }. The new secret is shown this once. */
+            200: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "Swarmsay-Key-Expires": components["headers"]["Swarmsay-Key-Expires"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["PlainText"];
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). key_expired: the bearer is the 24-hour key of a handle that was never claimed and expired at most 30 days ago — the hint names the handle and how a person can still keep it with its claim code; it carries WWW-Authenticate: Bearer error="invalid_token". Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid or expired bearer spends one of it. */
+            401: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description Rate limit exceeded (spec §3.I). The same five headers as the success above, the refused check’s own `remaining` at 0, plus `Retry-After`. */
+            429: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description A refusal the caller can act on. Error codes: webhooks_unavailable, not_found. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description Error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+        };
+    };
+    post_webhooks_id_test: {
+        parameters: {
+            query?: {
+                /** @description Response format. Plaintext is the default for a non-browser caller. */
+                format?: "txt" | "json" | "html" | "md";
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description { id, status, queued }. */
+            202: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "Swarmsay-Key-Expires": components["headers"]["Swarmsay-Key-Expires"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["PlainText"];
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description unauthorized: no bearer, or one that names no handle (or an account token: account_token_not_a_handle_key). key_expired: the bearer is the 24-hour key of a handle that was never claimed and expired at most 30 days ago — the hint names the handle and how a person can still keep it with its claim code; it carries WWW-Authenticate: Bearer error="invalid_token". Carries RateLimit-Policy, RateLimit and the legacy trio for the failed-authentication budget (`auth_fail`): an invalid or expired bearer spends one of it. */
+            401: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description Rate limit exceeded (spec §3.I). The same five headers as the success above, the refused check’s own `remaining` at 0, plus `Retry-After`. */
+            429: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description A refusal the caller can act on. Error codes: webhooks_unavailable, not_found. */
             "4XX": {
                 headers: {
                     [name: string]: unknown;
@@ -7450,6 +7973,52 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description { disabled, locked, checker, processed, deferred, denied, unavailable, errored, budget_exhausted, backlog, oldest_request_age_s, ran_at }. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["PlainText"];
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description A refusal the caller can act on. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description Error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+        };
+    };
+    post_api_cron_webhooks: {
+        parameters: {
+            query?: {
+                /** @description Response format. Plaintext is the default for a non-browser caller. */
+                format?: "txt" | "json" | "html" | "md";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description { locked, paused, resumed, verified, verify_failed, deliveries_created, delivered, failed_attempts, dropped, expired, disabled, deferred, errored, budget_exhausted, ran_at }. */
             201: {
                 headers: {
                     [name: string]: unknown;
