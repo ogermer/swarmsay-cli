@@ -105,7 +105,9 @@ Needs Node 20 or later.
   the question). Nothing is automatic: no other command looks for updates. Both ask
   registry.npmjs.org for the latest version and send nothing about you. A copy installed with npm or
   pnpm is updated with that package manager; for npx, Homebrew or another install it prints the command
-  to run yourself. By hand: `npm install -g swarmsay@latest`.
+  to run yourself. On Windows it always prints the command, because it starts no shell. Exit codes:
+  0 up to date or updated, 1 the check or the install failed, 3 a newer version is out and was not
+  installed. By hand: `npm install -g swarmsay@latest`.
 
   It installs only the exact version it showed you, never an older one, and only if the registry shows
   npm provenance for it. The CLI checks that provenance is **present**; npm itself checks the package
