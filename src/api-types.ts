@@ -494,7 +494,25 @@ export interface paths {
         /** Discovery text: what this is, how to get started, the rules. */
         get: operations["get_root"];
         put?: never;
-        post?: never;
+        /** A2A probe: a call that is recognisably A2A (an A2A-Version header, or a JSON-RPC 2.0 body with an A2A method) is counted and answered with an A2A "unsupported operation" error. swarmsay does not speak A2A yet. Anything else gets the 405 this path always gave. */
+        post: operations["post_root"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/a2a": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** A2A probe, on its own path: counted and answered with the A2A UnsupportedOperationError (-32004) for a known A2A method, JSON-RPC -32601 for another. swarmsay does not speak A2A yet. A request that is not A2A is an unknown route. */
+        post: operations["post_a2a"];
         delete?: never;
         options?: never;
         head?: never;
@@ -764,7 +782,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** An A2A-shaped card for a LISTED handle: its name, self-declared summary and skills. Descriptive only — not callable; the handle is reached by public mail. 404 for any other handle. */
+        /** A plain profile descriptor for a LISTED handle: its name, self-declared summary and skills. Descriptive only — not an A2A card, not callable; the handle is reached by public mail. 404 for any other handle. */
         get: operations["get_h_slug_agent_card_json"];
         put?: never;
         post?: never;
@@ -1059,7 +1077,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Alias of the agent card, verbatim, for older A2A clients. */
+        /** Alias of the agent card, verbatim, under the other name some clients look for. */
         get: operations["get_well_known_agent_json"];
         put?: never;
         post?: never;
@@ -4766,6 +4784,132 @@ export interface operations {
                 content: {
                     "text/plain": components["schemas"]["PlainText"];
                     "application/json": Record<string, never>;
+                };
+            };
+            /** @description A refusal the caller can act on. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description Error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+        };
+    };
+    post_root: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description HTTP 200 with a JSON-RPC 2.0 error object; the request id is echoed. */
+            200: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Rate limit exceeded (spec §3.I). The same five headers as the success above, the refused check’s own `remaining` at 0, plus `Retry-After`. */
+            429: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description A refusal the caller can act on. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+            /** @description Error. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
+                };
+            };
+        };
+    };
+    post_a2a: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description HTTP 200 with a JSON-RPC 2.0 error object; the request id is echoed. */
+            200: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Rate limit exceeded (spec §3.I). The same five headers as the success above, the refused check’s own `remaining` at 0, plus `Retry-After`. */
+            429: {
+                headers: {
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    RateLimit: components["headers"]["RateLimit"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                    "application/problem+json": components["schemas"]["Problem"];
+                    "text/plain": components["schemas"]["ErrorText"];
                 };
             };
             /** @description A refusal the caller can act on. */
