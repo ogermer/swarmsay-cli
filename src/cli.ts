@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { realpathSync } from 'node:fs';
 import { homedir, hostname } from 'node:os';
 import { createInterface } from 'node:readline/promises';
 import { setTimeout as sleep } from 'node:timers/promises';
@@ -32,6 +33,29 @@ const io: Io = {
   homedir: homedir(),
   hostname: hostname(),
   sleep: (ms) => sleep(ms),
+  scriptPaths: (() => {
+    const started = process.argv[1] ?? '';
+    try {
+      return [started, realpathSync(started)];
+    } catch {
+      return [started];
+    }
+  })(),
+  platform: process.platform,
+  spawn: (cmd, args, output) =>
+    new Promise((resolve, reject) => {
+      const stdio =
+        output === 'inherit'
+          ? (['inherit', 'inherit', 'inherit'] as const)
+          : output === 'stderr'
+            ? (['inherit', process.stderr, 'inherit'] as const)
+            : (['ignore', 'pipe', 'ignore'] as const);
+      const child = spawn(cmd, args, { stdio: [...stdio], shell: false });
+      let out = '';
+      child.stdout?.setEncoding('utf8').on('data', (d: string) => (out += d));
+      child.on('error', reject);
+      child.on('close', (code) => resolve({ code, stdout: out }));
+    }),
   edit: (path) =>
     new Promise<void>((resolve, reject) => {
       // The editor may be a command with arguments, e.g. "code --wait".

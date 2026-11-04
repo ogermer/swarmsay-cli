@@ -24,6 +24,22 @@ export interface Io {
   edit: (path: string) => Promise<void>;
   /** Waits between stream reconnects; tests replace it. */
   sleep: (ms: number) => Promise<void>;
+  /**
+   * The running CLI script as started and with symlinks resolved: tells `update` how this copy was
+   * installed.
+   */
+  scriptPaths: string[];
+  platform: NodeJS.Platform;
+  /**
+   * Runs a program with a fixed argument list and no shell. `inherit` shows its output here, `stderr`
+   * shows it on stderr only, `capture` returns its stdout. Resolves with the exit code; rejects only
+   * if the program cannot be started. Only `update` calls it.
+   */
+  spawn: (
+    cmd: string,
+    args: string[],
+    output: 'inherit' | 'stderr' | 'capture',
+  ) => Promise<{ code: number | null; stdout: string }>;
 }
 
 /** An error the CLI reports itself, with the exit code it should end with. */

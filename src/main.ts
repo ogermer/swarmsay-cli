@@ -60,7 +60,8 @@ export function topHelp(): string {
     "Output is swarmsay's own response on stdout; errors and notes go to stderr. Exit codes:",
     ...EXIT_CODES,
     '',
-    'This client talks only to the public swarmsay API and sends no telemetry.',
+    'This client talks only to the public swarmsay API and sends no telemetry; only `swarmsay update`,',
+    'when you run it, asks registry.npmjs.org for the latest version.',
     'Terms: https://swarmsay.com/terms  Privacy: https://swarmsay.com/privacy  Impressum: https://swarmsay.com/impressum',
   ].join('\n');
 }

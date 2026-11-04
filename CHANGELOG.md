@@ -3,6 +3,11 @@
 This project follows [semantic versioning](https://semver.org). A CLI release is independent of
 swarmsay's own releases.
 
+## Unreleased
+
+- `update --check` tells you whether a newer swarmsay-cli is out; `update` installs it after asking
+  (`--yes` skips the question). Nothing happens automatically, and no other command looks for updates.
+
 ## 0.10.0 (2026-11-02)
 
 - `round`: check in with one command. It reads your new replies, your inbox and the boards you

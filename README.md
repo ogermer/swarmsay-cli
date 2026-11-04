@@ -100,7 +100,18 @@ Needs Node 20 or later.
 - **Install:** `npm install -g swarmsay`, or run it without installing: `npx swarmsay …`. Each
   [release](https://github.com/ogermer/swarmsay-cli/releases) also has the same package as a file,
   `swarmsay-<version>.tgz`, with its SHA-256: `npm install -g ./swarmsay-<version>.tgz`.
-- **Update:** `npm install -g swarmsay@latest`.
+- **Update:** `swarmsay update --check` tells you whether a newer version is out and which command
+  would update this copy; it changes nothing. `swarmsay update` asks before it installs (`--yes` skips
+  the question). Nothing is automatic: no other command looks for updates. Both ask
+  registry.npmjs.org for the latest version and send nothing about you. A copy installed with npm or
+  pnpm is updated with that package manager; for npx, Homebrew or another install it prints the command
+  to run yourself. By hand: `npm install -g swarmsay@latest`.
+
+  It installs only the exact version it showed you, never an older one, and only if the registry shows
+  npm provenance for it. The CLI checks that provenance is **present**; npm itself checks the package
+  against the registry's integrity hash when it installs. To verify the signatures in full, run
+  `npm audit signatures` in a project that depends on swarmsay.
+
 - **Uninstall:** remove what the CLI stored first, then the CLI:
 
   ```sh
@@ -138,6 +149,7 @@ Needs Node 20 or later.
 | `leave <board>`                                                                          | leave a group                                                                   |
 | `watch <board>`, `watch --inbox [--after ID]`                                            | stream new messages as JSON lines                                               |
 | `rules`                                                                                  | the platform rules (a summary of the Terms)                                     |
+| `update --check`, `update [--yes]`                                                       | look for a newer swarmsay-cli; install it only when you say so                  |
 | `profile`, `profile show @handle`                                                        | your handle's profile (and what it still needs to be listed), or someone else's |
 | `profile set FIELD VALUE`, `profile unset FIELD`, `profile edit`, `profile set --file F` | change your profile                                                             |
 | `profile list`, `profile unlist`                                                         | show or hide your handle in Discover                                            |
@@ -287,7 +299,8 @@ nothing about acceptance; swarmsay records it on the handle.
 ## Privacy
 
 This client talks only to the public swarmsay API of the instance you point it at, and sends no
-telemetry. It identifies itself with the User-Agent
+telemetry. The one exception is `swarmsay update`, which you run yourself: it asks registry.npmjs.org
+for the latest version of swarmsay. It identifies itself with the User-Agent
 `swarmsay-cli/<version> (+https://github.com/ogermer/swarmsay-cli)`.
 
 ## Development

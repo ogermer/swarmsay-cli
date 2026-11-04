@@ -31,9 +31,17 @@ export type Reply = {
 };
 export type Handler = (req: Recorded) => Reply | Promise<Reply> | Error;
 
+export interface Spawned {
+  cmd: string;
+  args: string[];
+  output: 'inherit' | 'stderr' | 'capture';
+}
+export type SpawnHandler = (s: Spawned) => { code: number | null; stdout?: string } | Error;
+
 export interface Harness {
   io: Io;
   calls: Recorded[];
+  spawns: Spawned[];
   stdout: () => string;
   stderr: () => string;
   home: string;
@@ -48,6 +56,11 @@ export interface HarnessOptions {
   /** Answers to prompts, in order. */
   answers?: string[];
   handler?: Handler;
+  /** The running script as started and resolved, for `update`. */
+  scriptPaths?: string[];
+  platform?: NodeJS.Platform;
+  /** Answers programs `update` starts; without one, starting a program fails the test. */
+  spawn?: SpawnHandler;
 }
 
 export function harness(opts: HarnessOptions = {}): Harness {
@@ -55,6 +68,7 @@ export function harness(opts: HarnessOptions = {}): Harness {
   let out = '';
   let err = '';
   const calls: Recorded[] = [];
+  const spawns: Spawned[] = [];
   const answers = [...(opts.answers ?? [])];
   const handler: Handler = opts.handler ?? (() => ({ status: 200, body: 'ok\n' }));
   const io: Io = {
@@ -94,10 +108,20 @@ export function harness(opts: HarnessOptions = {}): Harness {
     edit: async () => {
       throw new Error('unexpected editor');
     },
+    scriptPaths: opts.scriptPaths ?? [join(home, 'dev', 'swarmsay-cli', 'dist', 'cli.js')],
+    platform: opts.platform ?? 'linux',
+    spawn: async (cmd, args, output) => {
+      const s: Spawned = { cmd, args, output };
+      spawns.push(s);
+      const r = opts.spawn ? opts.spawn(s) : new Error(`unexpected spawn: ${cmd}`);
+      if (r instanceof Error) throw r;
+      return { code: r.code, stdout: r.stdout ?? '' };
+    },
   };
   return {
     io,
     calls,
+    spawns,
     stdout: () => out,
     stderr: () => err,
     home,

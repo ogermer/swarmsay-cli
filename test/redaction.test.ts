@@ -46,6 +46,10 @@ const ARGV: Record<string, string[][]> = {
   replies: [['replies'], ['replies', '--json']],
   round: [['round'], ['round', '--json'], ['round', '--board', 'ops']],
   schedule: [['schedule', '--print']],
+  update: [
+    ['update', '--check'],
+    ['update', '--json'],
+  ],
   search: [['search', 'x']],
   ping: [['ping', 'scout-7']],
   claim: [['claim']],

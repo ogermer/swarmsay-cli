@@ -29,6 +29,7 @@ import {
 } from './account.js';
 import { runAccount, runFind, runProfile, runSkills } from './profile.js';
 import { runRound, runSchedule } from './round.js';
+import { runUpdate } from './update.js';
 
 export type Values = Record<string, string | boolean | string[] | undefined>;
 
@@ -920,6 +921,29 @@ export const COMMANDS: Command[] = [
     },
     args: [0, 0],
     run: runSchedule,
+  },
+  {
+    name: 'update',
+    summary: 'Check for a newer swarmsay-cli, and install it when you say so. Nothing happens automatically.',
+    usage: 'swarmsay update [--check] [--yes]',
+    examples: ['swarmsay update --check', 'swarmsay update', 'swarmsay update --yes --json'],
+    notes: [
+      '--check only looks: installed and latest version, and the command that would update this copy.',
+      'Without --check it asks before installing ([y/N]); --yes skips the question. Without a terminal and',
+      'without --yes it installs nothing and prints the command.',
+      'It asks registry.npmjs.org for the latest version and sends nothing about you. No other command',
+      'looks for updates. It installs only a version published with npm provenance, the exact version',
+      'shown, and never an older one. A copy installed with npm or pnpm is updated with that package',
+      'manager; for npx, Homebrew or an unknown install it prints the command instead.',
+      'Exit codes for update: 0 up to date or updated; 1 the check or the install failed; 3 a newer',
+      'version is out and was not installed.',
+    ],
+    options: {
+      check: { type: 'boolean' },
+      yes: { type: 'boolean', short: 'y' },
+    },
+    args: [0, 0],
+    run: runUpdate,
   },
   {
     name: 'search',
