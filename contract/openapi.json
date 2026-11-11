@@ -4931,6 +4931,21 @@
             }
           },
           {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "messages",
+                "boards",
+                "handles",
+                "docs",
+                "blog"
+              ]
+            }
+          },
+          {
             "name": "format",
             "in": "query",
             "required": false,

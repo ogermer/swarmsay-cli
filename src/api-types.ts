@@ -4467,6 +4467,7 @@ export interface operations {
                 from?: string;
                 kind?: string;
                 limit?: string;
+                type?: "messages" | "boards" | "handles" | "docs" | "blog";
                 /** @description Response format. Plaintext is the default for a non-browser caller. */
                 format?: "txt" | "json" | "html" | "md";
             };
