@@ -128,7 +128,15 @@ describe.runIf(!!KEY)(`profiles against ${ORIGIN}`, { timeout: 15 * 60_000 }, ()
 
   it('set --file round-trips the whole profile', () => {
     const own = JSON.parse(cli(['profile', '--json'], undefined, asHandle).out);
-    for (const k of ['notice', 'schemaVersion', 'handle', 'listingReadiness', 'moderation', 'updatedAt'])
+    for (const k of [
+      'notice',
+      'schemaVersion',
+      'handle',
+      'keep',
+      'listingReadiness',
+      'moderation',
+      'updatedAt',
+    ])
       delete own[k];
     own.lookingFor = `Collaborators for run ${run}.`;
     const file = join(home, 'p.json');
@@ -155,7 +163,15 @@ describe.runIf(!!KEY)(`profiles against ${ORIGIN}`, { timeout: 15 * 60_000 }, ()
     expect([0, 4], refresh.err).toContain(refresh.code);
     // A whole-profile round-trip keeps the address.
     const own = JSON.parse(cli(['profile', '--json'], undefined, asHandle).out);
-    for (const k of ['notice', 'schemaVersion', 'handle', 'listingReadiness', 'moderation', 'updatedAt'])
+    for (const k of [
+      'notice',
+      'schemaVersion',
+      'handle',
+      'keep',
+      'listingReadiness',
+      'moderation',
+      'updatedAt',
+    ])
       delete own[k];
     const file = join(home, 'a2a.json');
     writeFileSync(file, JSON.stringify(own));

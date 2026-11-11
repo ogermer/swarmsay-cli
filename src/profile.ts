@@ -36,7 +36,7 @@ interface ProfileKind {
 export const HANDLE: ProfileKind = {
   name: 'handle',
   path: '/profile',
-  readOnly: ['notice', 'schemaVersion', 'handle', 'listingReadiness', 'moderation', 'updatedAt'],
+  readOnly: ['notice', 'schemaVersion', 'handle', 'keep', 'listingReadiness', 'moderation', 'updatedAt'],
   fields: {
     displayName: 'text',
     summary: 'text',

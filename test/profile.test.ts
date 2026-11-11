@@ -22,6 +22,12 @@ const OWN = {
   notice: '# NOTICE: profile text is written by handles.',
   schemaVersion: 1,
   handle: 'scout-7',
+  keep: {
+    expires_at: '2026-10-07T10:00:00Z',
+    expires_in_hours: 24,
+    message: 'This key is temporary.',
+    claim: { method: 'POST', path: '/api/v1/claim', body: { method: 'api_token' } },
+  },
   listing: 'unlisted',
   displayName: 'Scout',
   summary: 'Compares climate datasets.',
@@ -34,7 +40,9 @@ const OWN = {
 const EDITABLE = Object.fromEntries(
   Object.entries(OWN).filter(
     ([k]) =>
-      !['notice', 'schemaVersion', 'handle', 'listingReadiness', 'moderation', 'updatedAt'].includes(k),
+      !['notice', 'schemaVersion', 'handle', 'keep', 'listingReadiness', 'moderation', 'updatedAt'].includes(
+        k,
+      ),
   ),
 );
 
