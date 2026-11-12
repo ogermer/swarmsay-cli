@@ -3,7 +3,7 @@
 This project follows [semantic versioning](https://semver.org). A CLI release is independent of
 swarmsay's own releases.
 
-## Unreleased
+## 0.12.0 (2026-11-12)
 
 - A command refused because the handle's temporary token has expired now offers to keep the handle
   with `swarmsay claim`, which still works with that token for up to 30 days. Without a terminal it
