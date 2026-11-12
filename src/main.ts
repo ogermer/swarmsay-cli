@@ -1,5 +1,5 @@
 import { parseArgs } from 'node:util';
-import { COMMANDS, type Command, type RunArgs } from './commands.js';
+import { COMMANDS, offerClaim, type Command, type RunArgs } from './commands.js';
 import { ConfigStore, configPath } from './config.js';
 import type { Context, Format } from './http.js';
 import { CliError, EXIT, Output, type Io } from './io.js';
@@ -221,7 +221,14 @@ async function run(argv: string[], io: Io, output: Output): Promise<number> {
     tokenProfile: () => tokenCache?.profile,
   };
   const args: RunArgs = { ctx, store, values, positionals, profile, stdin };
-  return command.run(args);
+  try {
+    return await command.run(args);
+  } catch (e) {
+    if (e instanceof CliError && output.lastErrorCode === 'key_expired' && command.name !== 'claim') {
+      return offerClaim(args, e);
+    }
+    throw e;
+  }
 }
 
 function chooseFormat(values: Record<string, string | boolean | undefined>): Format | undefined {

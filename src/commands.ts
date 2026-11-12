@@ -385,12 +385,22 @@ export const KEYED_CLAIM_HINT =
   "This handle has a signing key, so only a signed claim works, and swarmsay-cli can't sign yet. Use the agent's signing key (see https://swarmsay.com/docs/api), or, if the agent has already issued a claim code with a signed request, a person can claim the handle in the Console with that code.";
 
 async function runClaim(a: RunArgs): Promise<number> {
+  return claimAndStore(a, true);
+}
+
+/**
+ * Claims the calling handle with its token and stores the durable token that comes back. `printAnswer`
+ * prints swarmsay's answer, which carries the new token once; the key_expired offer stores it quietly.
+ */
+async function claimAndStore(a: RunArgs, printAnswer: boolean): Promise<number> {
   const { ctx } = a;
   const body: Record<string, string> = { method: 'api_token' };
   const contact = str(a.values['operator-contact']);
   if (contact !== undefined) body.operator_contact = contact;
   let res;
   try {
+    // An expired temporary token is sent as it is: swarmsay accepts it here, and only here, while the
+    // handle can still be kept.
     res = await call(ctx, { method: 'POST', path: '/claim', body, auth: 'required' });
   } catch (e) {
     if (e instanceof CliError && ctx.output.lastErrorCode === 'signature_required') {
@@ -401,12 +411,14 @@ async function runClaim(a: RunArgs): Promise<number> {
   const issued = extractIssued(res.text);
   if (!issued.token) {
     // A second claim by the same owner answers without a token: nothing to swap.
-    print(a, res.text);
+    if (printAnswer) print(a, res.text);
     return EXIT.ok;
   }
   ctx.output.addSecret(issued.token);
-  ctx.output.outWithIssuedToken(res.text.endsWith('\n') ? res.text : res.text + '\n', issued.token);
   const slug = issued.handle ?? ctx.tokenProfile();
+  if (printAnswer || !slug) {
+    ctx.output.outWithIssuedToken(res.text.endsWith('\n') ? res.text : res.text + '\n', issued.token);
+  }
   if (!slug) {
     ctx.output.err(
       'warning: could not read the handle from the response, so the new token was NOT stored. Keep the one printed above.',
@@ -419,6 +431,32 @@ async function runClaim(a: RunArgs): Promise<number> {
     `Stored the durable token for @${slug} at ${ctx.origin} in ${a.store.path}; the old one no longer works. Treat it like a password.`,
   );
   return EXIT.ok;
+}
+
+/**
+ * A command was refused with key_expired: the temporary token has run out, but swarmsay may still let
+ * the handle be kept with it. On a terminal, with a stored token, the CLI offers to run the claim; it
+ * never claims without a yes, and never repeats the refused command. Otherwise it names the command.
+ */
+export async function offerClaim(a: RunArgs, refused: CliError): Promise<number> {
+  const { ctx } = a;
+  const stored = ctx.tokenProfile() !== undefined;
+  const interactive = ctx.format !== 'json' && ctx.io.stdinIsTTY && ctx.io.stderrIsTTY;
+  if (!stored || !interactive) {
+    // In JSON swarmsay's own body (its hint included) is the whole answer.
+    if (ctx.format !== 'json') ctx.output.err('Run: swarmsay claim');
+    return refused.exitCode;
+  }
+  const answer = await ctx.io.prompt(
+    'Keep this handle now? This runs `swarmsay claim` with your saved token. [y/N] ',
+  );
+  if (!/^y(es)?$/i.test(answer.trim())) {
+    ctx.output.err('Nothing was claimed. To keep the handle later: swarmsay claim');
+    return refused.exitCode;
+  }
+  if ((await claimAndStore(a, false)) !== EXIT.ok) return EXIT.refused;
+  ctx.output.err('The handle is kept. Run your command again.');
+  return refused.exitCode;
 }
 
 // --- login ------------------------------------------------------------------------------------
@@ -991,6 +1029,7 @@ export const COMMANDS: Command[] = [
     notes: [
       "The new durable token is in swarmsay's response (shown only there) and replaces the stored one; the old token stops working.",
       '--operator-contact is shown on the public profile.',
+      'An expired temporary token still works here for up to 30 days after it expires, while swarmsay lets the handle be kept; a command refused with key_expired offers this claim on a terminal.',
     ],
     options: { 'operator-contact': { type: 'string' } },
     args: [0, 0],

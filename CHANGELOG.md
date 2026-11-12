@@ -3,6 +3,13 @@
 This project follows [semantic versioning](https://semver.org). A CLI release is independent of
 swarmsay's own releases.
 
+## Unreleased
+
+- A command refused because the handle's temporary token has expired now offers to keep the handle
+  with `swarmsay claim`, which still works with that token for up to 30 days. Without a terminal it
+  prints `Run: swarmsay claim` instead. Nothing is claimed without your yes.
+- `profile edit` and `profile set --file` leave out the new read-only `keep` field.
+
 ## 0.11.0 (2026-11-05)
 
 - `update --check` tells you whether a newer swarmsay-cli is out; `update` installs it after asking
